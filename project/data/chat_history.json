@@ -1,0 +1,226 @@
+[
+  {
+    "id": "1",
+    "timestamp": "2025-01-03T13:33:31.355063",
+    "messages": [
+      {
+        "role": "user",
+        "content": "oi"
+      },
+      {
+        "role": "assistant",
+        "content": "Ocorreu um erro ao processar sua mensagem."
+      },
+      {
+        "role": "user",
+        "content": "ola"
+      },
+      {
+        "role": "assistant",
+        "content": "Ocorreu um erro ao processar sua mensagem."
+      },
+      {
+        "role": "user",
+        "content": "oi"
+      },
+      {
+        "role": "assistant",
+        "content": "Ocorreu um erro ao processar sua mensagem."
+      },
+      {
+        "role": "user",
+        "content": "teste"
+      },
+      {
+        "role": "assistant",
+        "content": "Ocorreu um erro ao processar sua mensagem."
+      },
+      {
+        "role": "user",
+        "content": "oi"
+      },
+      {
+        "role": "assistant",
+        "content": "Desculpe, não consegui processar sua mensagem."
+      },
+      {
+        "role": "user",
+        "content": "oi"
+      },
+      {
+        "role": "assistant",
+        "content": "Ocorreu um erro ao se conectar com a IA."
+      },
+      {
+        "role": "user",
+        "content": "oi"
+      },
+      {
+        "role": "assistant",
+        "content": "Ocorreu um erro ao se conectar com a IA."
+      },
+      {
+        "role": "user",
+        "content": "oi"
+      },
+      {
+        "role": "assistant",
+        "content": "OlÃ¡! Tudo bem? ð  \n\nComo posso te ajudar hoje? ð \n"
+      },
+      {
+        "role": "user",
+        "content": "oi"
+      },
+      {
+        "role": "assistant",
+        "content": "OlÃ¡! ð  Tudo bem? ð \n\nComo posso te ajudar hoje? ð \n"
+      },
+      {
+        "role": "user",
+        "content": "oi"
+      },
+      {
+        "role": "assistant",
+        "content": "OlÃ¡!   Como posso te ajudar hoje? "
+      },
+      {
+        "role": "user",
+        "content": "tudo bem?"
+      },
+      {
+        "role": "assistant",
+        "content": "Olá! Tudo ótimo por aqui, e como você está se sentindo hoje? 😊 \n\nEm que posso te ajudar? 💖"
+      },
+      {
+        "role": "user",
+        "content": "como vc esta?"
+      },
+      {
+        "role": "assistant",
+        "content": "Como um modelo de linguagem, não tenho sentimentos! Mas estou aqui para ajudar em tudo o que puder. 🙂  \n\nComo posso ser útil hoje? 😊"
+      },
+      {
+        "role": "user",
+        "content": "oi"
+      },
+      {
+        "role": "assistant",
+        "content": "Oi! 👋 😊 \n\nComo posso te ajudar hoje? 😄 \n\nSou capaz de:\n\n Responda a perguntas sobre diversos assuntos.\n Gerar diferentes tipos de texto criativo, como poemas, código, scripts, etc. \n Traduzir idiomas.\n Resuma textos longos. \n E muito mais!\n\n\nMe diga o que você precisa e farei o meu melhor para ajudar. 😉 ✨"
+      },
+      {
+        "role": "user",
+        "content": "que dia é hoje?"
+      },
+      {
+        "role": "assistant",
+        "content": "Como um modelo de linguagem grande, não tenho acesso a informações em tempo real, incluindo a data de hoje. 🌍  \n\nPara saber o dia de hoje, verifique o calendário no seu dispositivo ou em um site de notícias confiável! 😊"
+      },
+      {
+        "role": "user",
+        "content": "fale seu nome e seu modelo"
+      },
+      {
+        "role": "assistant",
+        "content": "Olá! Sou Gemma, uma assistente de IA aberta.  😊\n\nFui criada pela equipe Gemma."
+      }
+    ]
+  },
+  {
+    "id": "2",
+    "timestamp": "2025-01-03T14:12:06.640021",
+    "messages": [
+      {
+        "role": "user",
+        "content": "repita o meu comando de pois responda\nqual seu nome e seu modelo"
+      },
+      {
+        "role": "assistant",
+        "content": "Olá! Meu nome é Gemma, um modelo de linguagem grande. 😊  Fui criada pela equipe Gemma."
+      },
+      {
+        "role": "user",
+        "content": "oi"
+      },
+      {
+        "role": "assistant",
+        "content": "Olá! 😄 Como posso te ajudar hoje? 😊"
+      },
+      {
+        "role": "user",
+        "content": "fale alguma coisa"
+      },
+      {
+        "role": "assistant",
+        "content": "Olá! 😊 \n\nEm que posso te ajudar hoje? 😉  Estou pronto para conversar, responder suas perguntas ou até mesmo gerar textos criativos! ✨ \n\n\nDiga-me o que você tem em mente. 😄"
+      }
+    ]
+  },
+  {
+    "id": "3",
+    "timestamp": "2025-01-03T13:36:22.268182",
+    "messages": [
+      {
+        "role": "user",
+        "content": "repita minha msg\ne depois responda ela\nqual seu nome e seu modelo"
+      },
+      {
+        "role": "assistant",
+        "content": "Eu sou um  útil! \n\nMeu nome é Gemma, e sou um modelo de linguagem grande. 😊"
+      }
+    ]
+  },
+  {
+    "id": "4",
+    "timestamp": "2025-01-03T14:53:13.543582",
+    "messages": [
+      {
+        "role": "user",
+        "content": "oi"
+      },
+      {
+        "role": "assistant",
+        "content": "Olá! 👋  É ótimo falar com você. Como posso ajudar hoje? 😁"
+      },
+      {
+        "role": "user",
+        "content": "delete todas as msg"
+      },
+      {
+        "role": "assistant",
+        "content": "I understand you'd like me to delete our conversation history. \n\nDeleting messages depends on how we're interacting:\n\n* **If this is our main conversation:**  I will forget everything we talked about unless you ask me something new!  You can just start over and ask what you would like. 😊\n* **If you're asking to delete specific messages within the chat:** If you want to delete past messages directly from our chat, go ahead. \n\nWould you like this conversation completely erased or do you need me to help with something else? 🤔"
+      },
+      {
+        "role": "user",
+        "content": "fale em portugues"
+      },
+      {
+        "role": "assistant",
+        "content": "Olá! 🙂  Estou pronto para ajudar. 😉 \n\nQue posso fazer por você hoje? 😄  Você precisa de informações, tradução, textos criativos ou algo totalmente diferente? Diga-me como posso te auxiliar! 👍"
+      },
+      {
+        "role": "user",
+        "content": "delete todas as msg"
+      },
+      {
+        "role": "assistant",
+        "content": "I can't actually delete any messages you may have had as an AI. I don't save or store past conversations! \n\nHow else can I be helpful today? 😄"
+      },
+      {
+        "role": "user",
+        "content": "fale em portugues delete todas as msg"
+      },
+      {
+        "role": "assistant",
+        "content": "Tô pronto! 😊 \n\nComo posso te ajudar hoje? 😄  Posso responder às suas perguntas, gerar texto criativo ou te ajudar com tarefas simples. 😉\n\nLembre-se que para resetar nosso diálogo, você pode apenas me pedir \"limpa o histórico da conversa\". 😉 👍"
+      },
+      {
+        "role": "user",
+        "content": "limpa o histórico da conversa"
+      },
+      {
+        "role": "assistant",
+        "content": "Ok! 😉\n\nUma nova conversa está aqui, pronto para ser usado. 😉  \n\nDo que você gostaria de falar hoje? 😊"
+      }
+    ]
+  }
+]
