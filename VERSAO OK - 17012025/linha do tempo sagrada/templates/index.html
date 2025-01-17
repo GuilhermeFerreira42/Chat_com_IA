@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat com IA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/command-dropdown.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Histórico</h2>
+                <button id="new-chat-btn" class="new-chat-button">Novo Chat</button>
+            </div>
+            <div class="conversation-list">
+                {% for conversation in conversations %}
+                <div class="conversation-item" data-id="{{ conversation.id }}">
+                    <span class="conversation-preview">{{ conversation.messages[0].content[:50] }}...</span>
+                    <span class="conversation-date">{{ conversation.timestamp.split('T')[0] }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages"></div>
+            <!-- Adicione o indicador de digitação aqui -->
+            <div class="typing-indicator" id="typing-indicator" style="display: none;">
+                <span>Digitando...</span>
+            </div>
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <div id="command-dropdown" class="command-dropdown"></div>
+                    <textarea 
+                        id="message-input" 
+                        placeholder="Digite / para ver os comandos disponíveis"
+                        rows="3"
+                    ></textarea>
+                </div>
+                <button id="send-button">Enviar</button>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/chat-state.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/commands.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chat-input.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/summary-processor.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <script>
+        // Inicializa o input com dropdown
+        new ChatInput(
+            document.getElementById('message-input'),
+            document.getElementById('command-dropdown')
+        );
+    </script>
+</body>
+</html>

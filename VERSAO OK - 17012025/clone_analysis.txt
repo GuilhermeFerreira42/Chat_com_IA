@@ -1,0 +1,48 @@
+# Análise do Projeto "Clone"
+
+## Estrutura do Projeto
+- clone/
+  - app.py
+  - static/
+    - js/
+      - main.js
+    - css/
+      - styles.css
+  - templates/
+    - index.html
+
+## Funções e Descrição
+
+### app.py
+1. home(): Renderiza a página inicial.
+2. enviar_mensagem(): Recebe uma mensagem do usuário, processa-a e retorna a resposta da IA. Armazena a conversa.
+3. listar_conversas(): Retorna todas as conversas armazenadas.
+4. obter_conversa(id): Retorna uma conversa específica pelo ID.
+
+### main.js
+1. toggleTheme(): Alterna entre os temas claro e escuro.
+2. toggleSidebar(): Alterna a visibilidade da barra lateral.
+3. mostrarTelaInicial(): Exibe a tela inicial e oculta o chat.
+4. iniciarChat(): Inicia uma nova conversa.
+5. escapeHTML(text): Escapa caracteres HTML para evitar injeções.
+6. adicionarMensagem(texto, tipo): Adiciona uma mensagem ao chat.
+7. mostrarCarregamento(): Exibe um indicador de carregamento.
+8. enviarMensagem(mensagem, input): Envia uma mensagem para a IA e exibe a resposta.
+9. carregarConversa(id): Carrega uma conversa existente.
+10. atualizarListaConversas(): Atualiza a lista de conversas exibidas.
+11. copiarMensagem(button): Copia uma mensagem para a área de transferência.
+12. regenerarResposta(button): Regenera a resposta da IA para uma mensagem anterior.
+13. renomearConversa(id): Renomeia uma conversa existente.
+14. excluirConversa(id): Exclui uma conversa existente.
+15. configureTextarea(textarea): Configura um textarea para autoexpansão.
+16. themeToggle.addEventListener('click', toggleTheme): Adiciona um listener para alternar o tema.
+17. sidebarToggle?.addEventListener('click', toggleSidebar): Adiciona um listener para alternar a barra lateral.
+18. headerSidebarToggle?.addEventListener('click', toggleSidebar): Adiciona um listener para alternar a barra lateral no cabeçalho.
+19. newChatBtn.addEventListener('click', mostrarTelaInicial): Adiciona um listener para mostrar a tela inicial.
+20. welcomeForm?.addEventListener('submit', (e) => { enviarMensagem(welcomeInput.value, welcomeInput); }): Adiciona um listener para enviar mensagem no formulário de boas-vindas.
+21. chatForm?.addEventListener('submit', (e) => { enviarMensagem(chatInput.value, chatInput); }): Adiciona um listener para enviar mensagem no formulário de chat.
+22. modelSelect?.addEventListener('change', (e) => { currentModel = e.target.value; }): Adiciona um listener para mudar o modelo selecionado.
+23. searchInput?.addEventListener('input', function(e) { ... }): Adiciona um listener para filtrar a lista de conversas com base na pesquisa.
+
+## Conclusão
+O projeto "Clone" é uma aplicação de chat que permite interações com uma IA, armazenando conversas e permitindo a recuperação de mensagens anteriores.

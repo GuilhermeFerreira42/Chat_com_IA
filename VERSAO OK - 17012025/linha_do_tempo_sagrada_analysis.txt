@@ -1,0 +1,70 @@
+# Análise do Projeto "Linha do Tempo Sagrada"
+
+## Estrutura do Projeto
+- linha do tempo sagrada/
+  - app.py
+  - utils/
+    - text_processor.py
+    - chat_history.py
+  - static/
+    - js/
+      - chat.js
+      - chat-input.js
+      - chat-state.js
+      - commands.js
+      - summary-processor.js
+    - css/
+      - style.css
+      - command-dropdown.css
+  - templates/
+    - index.html
+
+## Funções e Descrição
+
+### app.py
+1. home(): Renderiza a página inicial com o histórico de conversas.
+2. get_conversation(conversation_id): Retorna uma conversa específica pelo ID.
+3. send_message(): Recebe uma mensagem do usuário, processa-a e retorna a resposta da IA, utilizando streaming para mensagens longas.
+
+### text_processor.py
+1. split_text(text, words_per_chunk): Divide um texto em partes menores com base no número de palavras.
+
+### chat_history.py
+1. ensure_data_directory(): Garante que o diretório de dados exista.
+2. get_conversation_history(): Recupera o histórico de conversas armazenadas.
+3. get_conversation_by_id(conversation_id): Busca uma conversa específica pelo ID.
+4. save_conversation(message, response, conversation_id): Salva ou atualiza uma conversa no histórico.
+
+### chat.js
+1. showMessage(content, type = 'assistant'): Mostra uma mensagem no chat.
+2. handleMessage(message): Lida com a mensagem do usuário.
+3. loadConversation(conversationId): Carrega uma conversa específica.
+4. simulateTyping(text, element): Simula a digitação de uma mensagem.
+
+### chat-input.js
+1. constructor(inputElement, dropdownContainer): Construtor da classe ChatInput.
+2. setupEventListeners(): Configura os listeners de eventos.
+3. handleInput(): Lida com a entrada do usuário.
+4. handleKeydown(e): Lida com a tecla pressionada.
+5. handleClickOutside(e): Lida com cliques fora do dropdown.
+6. showSuggestions(suggestions): Mostra sugestões de comandos.
+7. hideSuggestions(): Esconde as sugestões de comandos.
+8. selectCommand(command): Seleciona um comando.
+
+### chat-state.js
+1. setMode(newMode): Define o modo do chat.
+2. setConversationId(id): Define o ID da conversa atual.
+3. isInSummaryMode(): Verifica se está no modo de resumo.
+
+### commands.js
+1. handleCommand(text): Lida com comandos de texto.
+2. filterCommands(prefix): Filtra comandos com base no prefixo.
+3. showCommandsList(): Mostra a lista de comandos disponíveis.
+
+### summary-processor.js
+1. processSummaryText(text): Processa o texto para resumo.
+2. splitTextIntoChunks(text, wordsPerChunk): Divide o texto em partes menores.
+3. sendForSummary(text): Envia o texto para resumo.
+
+## Conclusão
+O projeto "Linha do Tempo Sagrada" é uma aplicação de chat que permite interações com uma IA, gerenciando o histórico de conversas e processando mensagens de forma eficiente.

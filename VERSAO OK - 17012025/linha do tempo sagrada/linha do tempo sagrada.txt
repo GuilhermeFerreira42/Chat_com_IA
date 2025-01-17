@@ -1,0 +1,2612 @@
+Conteúdo de app.py:
+from flask import Flask, render_template, request, jsonify, Response
+import json
+from datetime import datetime
+import requests
+from utils.text_processor import split_text
+from utils.chat_history import save_conversation, get_conversation_history, get_conversation_by_id
+
+app = Flask(__name__)
+app.secret_key = 'sua_chave_secreta_aqui'
+
+API_URL = "http://localhost:11434/v1/chat/completions"
+MODEL_NAME = "gemma2:2b"
+
+@app.route('/')
+def home():
+    conversations = get_conversation_history()
+    if not conversations:
+        conversations = []
+    return render_template('index.html', conversations=conversations)
+
+@app.route('/get_conversation/<conversation_id>')
+def get_conversation(conversation_id):
+    conversation = get_conversation_by_id(conversation_id)
+    if conversation:
+        return jsonify(conversation)
+    return jsonify({'error': 'Conversa não encontrada'}), 404
+
+@app.route('/send_message', methods=['POST'])
+def send_message():
+    data = request.json
+    message = data.get('message', '')
+    conversation_id = data.get('conversation_id')
+
+    if len(message.split()) > 300:
+        chunks = split_text(message)
+        responses = []
+        for chunk in chunks:
+            response = process_with_ai(chunk)
+            responses.append(response)
+        final_response = " ".join(responses)
+    else:
+        final_response = None  # Streaming será usado para mensagens menores
+
+    def generate_streamed_response():
+        for part in process_with_ai_stream(message):
+            yield f"data: {json.dumps({'content': part})}\n\n"
+
+    # Configura streaming para mensagens
+    response = Response(generate_streamed_response(), content_type="text/event-stream")
+    response.headers['Cache-Control'] = 'no-cache'
+
+    # Atualizar o histórico após streaming
+    if final_response is not None:
+        if not conversation_id:
+            conversation_id = save_conversation(message, final_response)
+        else:
+            save_conversation(message, final_response, conversation_id)
+
+    return response
+
+def process_with_ai(text):
+    try:
+        payload = {
+            "model": MODEL_NAME,
+            "messages": [
+                {"role": "system", "content": "Você é um assistente útil."},
+                {"role": "user", "content": text}
+            ],
+            "stream": False
+        }
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(API_URL, json=payload, headers=headers)
+        response.raise_for_status()
+
+        response_data = response.json()
+        if 'choices' in response_data and len(response_data['choices']) > 0:
+            return response_data['choices'][0]['message']['content']
+        return "Erro: Nenhuma resposta válida recebida da IA."
+    except requests.exceptions.RequestException as e:
+        print(f"[Debug] Erro na requisição HTTP: {str(e)}")
+        return "Ocorreu um erro ao se conectar com a IA."
+    except Exception as e:
+        print(f"[Debug] Erro inesperado: {str(e)}")
+        return "Ocorreu um erro inesperado ao processar sua mensagem."
+
+# def process_with_ai_stream(text):
+#     try:
+#         payload = {
+#             "model": MODEL_NAME,
+#             "messages": [
+#                 {"role": "system", "content": "Você é um assistente útil."},
+#                 {"role": "user", "content": text}
+#             ],
+#             "stream": True
+#         }
+#         headers = {"Content-Type": "application/json"}
+#         response = requests.post(API_URL, json=payload, headers=headers, stream=True)
+#         response.raise_for_status()
+
+#         for line in response.iter_lines(decode_unicode=True):
+#             if line.strip() and line.startswith("data: "):
+#                 line = line[6:].strip()
+#                 try:
+#                     response_data = json.loads(line)
+#                     if 'choices' in response_data and len(response_data['choices']) > 0:
+#                         delta = response_data['choices'][0]['delta']
+#                         if "content" in delta:
+#                             yield delta["content"]
+#                 except json.JSONDecodeError:
+#                     print(f"[Debug] Erro ao decodificar JSON: {line}")
+#     except requests.exceptions.RequestException as e:
+#         print(f"[Debug] Erro na requisição HTTP: {str(e)}")
+#     except Exception as e:
+#         print(f"[Debug] Erro inesperado: {str(e)}")
+
+def process_with_ai_stream(text):
+    try:
+        payload = {
+            "model": MODEL_NAME,
+            "messages": [
+                {"role": "system", "content": "Você é um assistente útil."},
+                {"role": "user", "content": text}
+            ],
+            "stream": True
+        }
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(API_URL, json=payload, headers=headers, stream=True)
+        response.raise_for_status()
+
+        for line in response.iter_lines(decode_unicode=True):
+            if line.strip() and line.startswith("data: "):
+                line = line[6:].strip()
+                try:
+                    response_data = json.loads(line)
+                    if 'choices' in response_data and len(response_data['choices']) > 0:
+                        delta = response_data['choices'][0]['delta']
+                        if "content" in delta:
+                            # Normalizar o texto para UTF-8 e remover caracteres estranhos
+                            content = delta["content"].encode('latin1').decode('utf-8', errors='ignore')
+                            yield content
+                except json.JSONDecodeError:
+                    print(f"[Debug] Erro ao decodificar JSON: {line}")
+    except requests.exceptions.RequestException as e:
+        print(f"[Debug] Erro na requisição HTTP: {str(e)}")
+    except Exception as e:
+        print(f"[Debug] Erro inesperado: {str(e)}")
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+Conteúdo de codigo_completo.txt:
+
+
+Conteúdo de linha do tempo sagrada.txt:
+Conteúdo de app.py:
+from flask import Flask, render_template, request, jsonify, Response
+import json
+from datetime import datetime
+import requests
+from utils.text_processor import split_text
+from utils.chat_history import save_conversation, get_conversation_history, get_conversation_by_id
+
+app = Flask(__name__)
+app.secret_key = 'sua_chave_secreta_aqui'
+
+API_URL = "http://localhost:11434/v1/chat/completions"
+MODEL_NAME = "gemma2:2b"
+
+@app.route('/')
+def home():
+    conversations = get_conversation_history()
+    if not conversations:
+        conversations = []
+    return render_template('index.html', conversations=conversations)
+
+@app.route('/get_conversation/<conversation_id>')
+def get_conversation(conversation_id):
+    conversation = get_conversation_by_id(conversation_id)
+    if conversation:
+        return jsonify(conversation)
+    return jsonify({'error': 'Conversa não encontrada'}), 404
+
+@app.route('/send_message', methods=['POST'])
+def send_message():
+    data = request.json
+    message = data.get('message', '')
+    conversation_id = data.get('conversation_id')
+
+    if len(message.split()) > 300:
+        chunks = split_text(message)
+        responses = []
+        for chunk in chunks:
+            response = process_with_ai(chunk)
+            responses.append(response)
+        final_response = " ".join(responses)
+    else:
+        final_response = None  # Streaming será usado para mensagens menores
+
+    def generate_streamed_response():
+        for part in process_with_ai_stream(message):
+            yield f"data: {json.dumps({'content': part})}\n\n"
+
+    # Configura streaming para mensagens
+    response = Response(generate_streamed_response(), content_type="text/event-stream")
+    response.headers['Cache-Control'] = 'no-cache'
+
+    # Atualizar o histórico após streaming
+    if final_response is not None:
+        if not conversation_id:
+            conversation_id = save_conversation(message, final_response)
+        else:
+            save_conversation(message, final_response, conversation_id)
+
+    return response
+
+def process_with_ai(text):
+    try:
+        payload = {
+            "model": MODEL_NAME,
+            "messages": [
+                {"role": "system", "content": "Você é um assistente útil."},
+                {"role": "user", "content": text}
+            ],
+            "stream": False
+        }
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(API_URL, json=payload, headers=headers)
+        response.raise_for_status()
+
+        response_data = response.json()
+        if 'choices' in response_data and len(response_data['choices']) > 0:
+            return response_data['choices'][0]['message']['content']
+        return "Erro: Nenhuma resposta válida recebida da IA."
+    except requests.exceptions.RequestException as e:
+        print(f"[Debug] Erro na requisição HTTP: {str(e)}")
+        return "Ocorreu um erro ao se conectar com a IA."
+    except Exception as e:
+        print(f"[Debug] Erro inesperado: {str(e)}")
+        return "Ocorreu um erro inesperado ao processar sua mensagem."
+
+# def process_with_ai_stream(text):
+#     try:
+#         payload = {
+#             "model": MODEL_NAME,
+#             "messages": [
+#                 {"role": "system", "content": "Você é um assistente útil."},
+#                 {"role": "user", "content": text}
+#             ],
+#             "stream": True
+#         }
+#         headers = {"Content-Type": "application/json"}
+#         response = requests.post(API_URL, json=payload, headers=headers, stream=True)
+#         response.raise_for_status()
+
+#         for line in response.iter_lines(decode_unicode=True):
+#             if line.strip() and line.startswith("data: "):
+#                 line = line[6:].strip()
+#                 try:
+#                     response_data = json.loads(line)
+#                     if 'choices' in response_data and len(response_data['choices']) > 0:
+#                         delta = response_data['choices'][0]['delta']
+#                         if "content" in delta:
+#                             yield delta["content"]
+#                 except json.JSONDecodeError:
+#                     print(f"[Debug] Erro ao decodificar JSON: {line}")
+#     except requests.exceptions.RequestException as e:
+#         print(f"[Debug] Erro na requisição HTTP: {str(e)}")
+#     except Exception as e:
+#         print(f"[Debug] Erro inesperado: {str(e)}")
+
+def process_with_ai_stream(text):
+    try:
+        payload = {
+            "model": MODEL_NAME,
+            "messages": [
+                {"role": "system", "content": "Você é um assistente útil."},
+                {"role": "user", "content": text}
+            ],
+            "stream": True
+        }
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(API_URL, json=payload, headers=headers, stream=True)
+        response.raise_for_status()
+
+        for line in response.iter_lines(decode_unicode=True):
+            if line.strip() and line.startswith("data: "):
+                line = line[6:].strip()
+                try:
+                    response_data = json.loads(line)
+                    if 'choices' in response_data and len(response_data['choices']) > 0:
+                        delta = response_data['choices'][0]['delta']
+                        if "content" in delta:
+                            # Normalizar o texto para UTF-8 e remover caracteres estranhos
+                            content = delta["content"].encode('latin1').decode('utf-8', errors='ignore')
+                            yield content
+                except json.JSONDecodeError:
+                    print(f"[Debug] Erro ao decodificar JSON: {line}")
+    except requests.exceptions.RequestException as e:
+        print(f"[Debug] Erro na requisição HTTP: {str(e)}")
+    except Exception as e:
+        print(f"[Debug] Erro inesperado: {str(e)}")
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+Conteúdo de codigo_completo.txt:
+
+
+Conteúdo de requirements.txt:
+flask==3.0.2
+python-dotenv==1.0.1
+requests==2.31.0
+
+Conteúdo de command-dropdown.css:
+/* Estilos para o dropdown de comandos */
+.command-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  display: none;
+  z-index: 1000;
+}
+
+.command-dropdown.active {
+  display: block;
+}
+
+.command-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+}
+
+.command-item:hover {
+  background-color: #f5f5f5;
+}
+
+.command-item:last-child {
+  border-bottom: none;
+}
+
+.command-name {
+  font-weight: bold;
+  color: #1a73e8;
+}
+
+.command-description {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.chat-input-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+Conteúdo de style.css:
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
+}
+
+.app-container {
+    display: flex;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 300px;
+    background: white;
+    border-right: 1px solid #ddd;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.sidebar h2 {
+    margin: 0;
+    color: #1a1a1a;
+}
+
+.new-chat-button {
+    background-color: #0084ff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.new-chat-button:hover {
+    background-color: #0073e6;
+}
+
+.conversation-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.conversation-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.conversation-item:hover {
+    background-color: #f5f5f5;
+}
+
+.conversation-item.active {
+    background-color: #e3f2fd;
+}
+
+.conversation-preview {
+    display: block;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.conversation-date {
+    font-size: 12px;
+    color: #666;
+}
+
+.chat-container {
+    flex: 1;
+    background: white;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.message {
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    border-radius: 10px;
+    max-width: 80%;
+}
+
+.user-message {
+    background-color: #e3f2fd;
+    margin-left: auto;
+}
+
+.assistant-message {
+    background-color: #f5f5f5;
+}
+
+.chat-input-container {
+    padding: 20px;
+    border-top: 1px solid #eee;
+    display: flex; /* Alinha os elementos na horizontal */
+    gap: 10px; /* Adiciona espaçamento entre o campo e o botão */
+    width: 100%; /* O container ocupa toda a largura */
+}
+
+.chat-input-wrapper {
+    position: relative;
+    flex: 1;
+    width: 100%; /* Garante que o campo ocupe todo o espaço disponível */
+}
+
+#message-input {
+    flex: 1;
+    padding: 15px; /* Aumenta o espaçamento interno */
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    resize: none;
+    font-family: inherit;
+    font-size: 16px; /* Aumenta o tamanho da fonte */
+    width: 100%; /* Campo ocupa toda a largura disponível */
+    min-height: 80px; /* Define uma altura mínima confortável */
+    max-height: 200px; /* Limita a altura máxima */
+    overflow-y: auto; /* Permite rolagem vertical quando necessário */
+    box-sizing: border-box; /* Inclui padding e borda no cálculo do tamanho */
+}
+
+#send-button {
+    padding: 15px 20px;
+    font-size: 16px; /* Tamanho da fonte maior */
+    background-color: #0084ff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-align: center;
+}
+
+#send-button:hover {
+    background-color: #0073e6;
+}
+
+.typing-indicator {
+    padding: 10px;
+    font-style: italic;
+    color: #888;
+}
+
+Conteúdo de favicon.ico:
+           3     PNG
+
+   
+IHDR         \rf   orNTϢw  3fIDATx]|Uֿ,յ{yiUwO⧫NH kCV?WĲ  e!4Q)k*=y=RҐ|ܙIfG	e̽{ι@ @ !(!dF Ù)23@ 4	m߂s_
+!@n.	B+
+@4a$- ^D Á
+P,@h"
+H H R  @ @ HR  @ @ HR  @ @ HR  @ @ U( 9 
+ =yBX(BEA	`W z Zaip4`/	;¨vĳE[ݚ	dMCS@ Y%)p]ʄd*3P+ CWdAxCՂd2-?_',7,FP 7$rLX'4rH6wJa*JOY{9|;p(x ;1%K͖>3F=^)wX
+?ń%AHqhu`:tP1^Rkx0fRp]*߁"x~Y@X	<y=H;C 7D=31!,!Z`J>
+tp(C|
+<30 aڙ	xX{B/ki3=
+V!٠/!!bqi#d2ۆ+p, .jJϜ6_ ^k񜤌ݑze4q
+<J
+!`|8ޙ-L>.jH*47o>*$\0 nףBrMu1ʄ5!4͘9c%I/y=tڧN 7vٯ_t:`B`Q 
+3,.v%pCDN/cDn".=g^tlb+.m 
+wF|40`ka
+WR&S0pP*w7% ,Y>BC?<h^
+b20G\n4< {pu,߄?\\4@SmG(~r}4I&Єi W5WsרQ~R~'"v\_$wߢ.aGH	xě<aP'7Je$mS@i(	?!04RT Km-%$V%p,
+J:nQ[kgx7DW'(yrޮ$ƧVx>Lv^0R{>$"~B)Y`&4omxA>wgJߕ6sp'oym5ƺ~~WJಣH[Bel"RBYw=WU|O*) m;k$^e9Z\L~{%s(͒pK)*DGE\ Y
+mEݥy!0vqN&'?Os&2
+`i8VhFuC&
+w 뀫(5$f^^Y<4
+>t[P8	WqAi	8/
+
+ܭ:wJ9?:7=gG;/Bs}Vo=D y޷̏¿6,;>H̏Qh17`\.NTkoh^^*{vjH"X-XG-c Za/e!6f~+K`_v騮XHkAB[#n AxiAp?)n<j&ͪ'-f~Aީ,\^3:]Di5*\ ~R^=Q̤{@	K@O /磋l6:)m IHxRp45SBʫ뻜g%+~4S~O8b}X}Ofz\Ay\BD}Q}٩?{iK齡w9'Fkj?m5O%0~_2\^U̏nz+*GS'W5ZNu
+h~?o~׿΅@yq>*GLiQ=Iϐ~]<]ϪA	J:A8;[B7LѳBhܙb\	trǏv8ב7
+\C3j^.x;;Yڒ:X-ԻB=Z@(
+|Uj@QD3;i\y|Isl
+w\16C0RRN_=Q f0GM5Z+ :r~k^X{l!~/bg?7$ޒCD ~~.A5$\b)ZV5S!,X;-c%C%OS?ygc%ATTՏ.o2&O쳙~8C>u%Ug#CI/\;Tњo{f | J`nibH X)A{2hb F誫;ђ	߶!hR"W5Kz9)A|E`hOwL[	MfQy4'UoKcE*0GT </`hjمyOi)a7uCM4Mm
+!?ԉ(ݶOwVOֳ"H@_'Q{qߦwR_
+V 'Gp+י-ŏvaàioP(Xnc
+`Q<?,V>i:7`~`zyEj>jL CzT |TO~yȌz% B/hϽ87OI'ɥBЦ?hwtUagҊ@) 9oyhUjMtonN^D+Sع 0oU+hio
+uX
+v~r;&j31UӀIP7IA)3#t'ۂR`M K.0-AA" nhzva:
+ `r-|drD8 SOwL& 8tgr0 
+U濲/6Ʉ r
+8Y=Q$Pjp0(rя~sJw &$Ab8 UcWljGâ_:T%󿉖	S+OՀU禇R1mTntGlPj݀	p\
+ /
+	qU߽?o:KK<3>pzz*ڹ\`}LV //
+~S	p$eP6#u[%4Ju
+_~C9(<oL8bcr%@lX|_U-)&wbV|^	83BWR5Vצr4eWUOT {S>2R \[=1kX }Ñ_&i' '׿
+tzP)3 9i#|a1QcI 0aukT Р'z xqE2rrug?' F4^)jP9ZvvJ	u#
+zU 
+8RU ֚)!!ՓHH	48M]i=e:S |@`k
+z۽ ʑָ@L~`)
+zz;z7 X UV& PrDeIj g*ǐpex 	Gp̄{nQV'ϫ}B| &+] ņ(+A]p[]'B=jΩ/BO OiSL@QTOn⁆ #idD ת9Lp+$sSB׹`l22ĦKLt Y ՓJ	0K I׳%ʥ- jȌȿG0L3MyKtO:HہhW Ps>u!/aBCWg
+;73rDf*)Uu9	 Ml`A "^b0,;pP _P	Dµ9ѝWOg-#982"nq.4@)35XxW=!BZ8rn0A'/%T 1ʑ3#( tza}m} 3iAcL%2*{ʠ~]X8QzA$~Z0RwDX@:cC4w?Q=I
+@R9JgqD+0݀T4PI󐻠`& vpg'8pslfܬj)C6QEO{ٙmFwpzDg<9ORR85'?ȄI
+5ߴfe3WPdqw-HYל]y7eldesƖa:&<0QZ+=~ǁeqi`؄CFpFkn)`@Y9++0D-Fp8;G#9Bc2  \GyG	J!jma
+(;\
+8f'A
+TTV^p@dqI`4( c $H"Y
+?Ѡ'*yXd%`F) :AOTҞ1-pJqACXg	&U pEm\@GaIy5`
+~"Ѕ_peEH'd8A"$@Ghi
+P
+gLV[la$@([|H9FmYú{Ŀ穿E^??_ɽxK{`;.WdAIqV^T`/&b´/fr.MNr
+|H^R ou{-_{){k_*b,6R߫اhVPx̵o4M-7'h,
+
+f `%_	_|5-[2c~_~5[HMٴuT`qݽf}3[+/@3os/|||&>#>?JMm$.{alڲݕh>濕`qV`=gp$7X'x]|c~嬯\mݽf̜%MK
+ E~?|F|V_gemuo
+RiI]s`4fPB|
+WF{mN&%^J0)oWegd%l[po-_Cw(-[wn&v>Q>Py\?|g0iRqoff~YsfS) UJ$epBoAa}]P
+ A~7|6|Fml#*z;#OdK}O,`W,?PVV~+\v`heog'8i*E;8-7O;a=MfiDx_`[ȊM|y냕eVΛR7]/q)V\Z`pYvU0׬:ڍ3w?W?w_W\r'3Vl򊄲mWﱯϴ?/9&e3KAr9),پԽY
+i^#9ur
+wgsymذqY0`(gٓVvž~W&\-%{[nNU6A1٧
+f~i`2z5X]:߯\[Ĝ$WpUK ~'~g[U|kh509&Ӭ(  Z`fהUo,.S͚=Ww~jU	/F-^*R ɫ=|֯m]f屙6c9Nr#0-?Mez|]ޱsc9s׃vZjZ 9N̺
+ =Slkf"3-mU_~_57fN?
+~:U-'Pfa6hh	7{~8ttC>Θ7m. ~<3r?pWmmm
+:ȅr3WM`O&h*+a^@M0H:t$!qDřO^~73rwm&6m>~bZVf2`4%Ԡ+P5n3VD
+ɹ{߾k_v|ׯaj
+WFoٿ3(V|JJJ@yYō0`;ylTG_5ߥ^XZ
+b!J%R>Q7;[-VƬV*$q
+W
+*g2Dmݶc~,׿g
+!\M~"٪|lSl[e >I걧e?PLK	BSŉ'$+9)^aEs؛4V1Y}|Iu^eaJ ~2K6"ψ~<T
+j͆לpo~>M
+H{W+ ̅Uk<nњҾ<<|w+* }#L#xn8ZX0mnsw]mfc`<c63G 2VTӄ_U	ed:	ڽ׋]pE[Xw%JÎdv$;joRd/?RYOQ&`gNzDX1mw`2[
+~}Oa/vU囆W ;|I1wWX"ІؖĔjãynMh=-,f(*T
++
+m,r{qLVY#&M	-_\8y.q|G|gO?~vX]Lr~-.c4	j{J*1 8֟3vIu0US=ȸ kzTOgqzX` ffcn|iv6ƵBE.G
+M/8vh- ٟ
+$#WU`fMMkA/]^wP)J [N`Kn-ў\|_~]wFNض7f~??b߃>t/(@3t<T5SUV 
+j?(\rc_Zغ}篦 g|Xntd^.ywu]VfWn5pv6Npr) XT55M!aMdrظiGâ$8 3pQ{V.['Iy`g J?sיvfO*PJ8m?5=nsn0zbs7X9W[&( ^!_{.bMU?mT߳dYCP4=o2-L`_/8UpApY*ytŦMN6hsb+#A_zђe8CG\=ܞrT)ÛՇt໹n؇dsNv[ҫ4	>~be'
+|TmUcmva[i`f(r]
+ ]*WvI+&9n6T~fyKU~zw2{I	
+h(¥evT }NIqsx]>]B7gמ*tWYdtvi3-wr{PZY),pι 
+bD~AQs裡?eҪ@MR!(8)]*;k
+@ݮrL.}Q 珪owڳ -T\{~i=6#0+,·Z;"],"[-U͸[ptT~
+9* Rw*Ni+VLy9ժ3-h2%4x!ъ+Ca~|nݦ]>ZE
+]{LཔςO/ҞQjX\Wa_>dޏ>
+%G J"89BV+H$t.\
+/
++F'wʅ\*Nq]gBjW{q10YO>
+16~
+T pi3/e?L4Zgt( 9MYqȅ{!&1Me;}QsL&ay̖G৩3!3	iHMP Efx}םL.,6
+@<#Ӿ?s; ~v&B7klxߺज़}>mm2ǫd>}mjk0RK4`z8
+t3	]&!(2a?akK wYLߺK
+y,?}3?ޯyk1Lfk#GG'~:0+xI h~\  /  ('.o
+gǥ>W?cbi{䈑YybuںaG`ԧI	\c4 1j;Pq0xz/vgϋzmD֧gڙEgfD$\ľ},7,2r7Pp`qE],,:M\6oLrM_R w>MZ#IH
+e n؀;(Bi=l[P౪ͼž4 )~?RHcB=(-9.=^1N\~|~򿇏d3{Qf{^
+RF%Mg?AJ߹𧇷?i_R~r%<m13-/~z`	{LEMJ3 |.շucʎ*n#aw^JSXe&ӁGygW{H	/V㬀C^XNBƁ?
+bපMb3ݿmWUeơrVQVġ~qOcǮ6@9/R$WUxIq%?g
+='Ϸro[,
+ 	U~%rA  kzs
+&-g}az ῪϟCs6,g7USb; 3
+g_(DJO5-S͞ǬG	Pp ) wyWKbڂTCo<;7/f[B*%Ε\'"X?῅N[\#Z
+*/ԝ=dN?,">kLWoȔ2Vczй}u};3X=bQEW>ꕀ8 %@g:m44p6t{(P^.'0?`T/
+=riy-;ٮM9/;}4fp®Ø!Pb 3݀vXoCWw>@7A5 38v2#Ҟ{HF)jEȝʄalwX8q\	tU,n)qp׏Vc
+!/+[ݲX)Zl6fͧAhz8V\@ d&`s?,֧F3;}'
+Bĉ'!A`
+8L//
+@ 4]%y@0	V{V:@T|9}QFKlu17Hz .{zO~el~+:@w*a# Du?߲c/'
+@.Rfkf@-tY~o1Ylmf+G 4()-ee'P3V<1'an>	?<.@9?f^*S 	1'mYoiZRجlrkh=@`-g@pNbBMcS}Of_MDfϵ
+әylyQ%
+̜|Wd/d4_3
+Q //YAmhf"f
+@<,<#kߴ]{
+;wiܺ}y:nٺMس7uõC ,l\6!W_;?!Bc/Y\.
+ݟ>j3zӳWs@򅞽퓄vm.ZKI ^^9XJ 1zQ1B|\0Pԑ) @
+@   3D  `]D%|v1G^zˀ)ccY:@(ICcc2'$^
+11q* )Cp}.nQħQ $?۵{ AVuA 2EHL xrbn R sb)@ GvA wk1Bw sԳ,6nѮ];6=7ٶߵk]u->/$ķ ؘ -L|;r 1mcY3YnYzƜtNlLKx:>K?(@ @
+@ @
+@ @
+@ @
+@R`:pth֥K@_5cJ"<"**E?:=ޱYgLJE]/:wAaW+ `lt삨<T_l׎	hY'nA2/p
+0>.
+  EEGB$,iމ6 7[wA ֶ߉:@pv+>J`0:
+r31ܺ!,1+s#..acRRK@1Or~ޡ{4|3) ǰu<{[X;uJ/Ƿ#&6/iFO x	b"POO5FХK7!&:֕IO|..6E?՞:@za={
+ail3?;+P GZSG)ެO>{=1_྿*@1qK:wrcRbH|5ֱC'dBRb3:uw=Cx*\I1qLHу%ķgnucj0aw2!ӍYΝ#	.k>%%u{}c_!!}xBB"ԉ:@Re		Iav]	3&LlM?Bc׮l؄,6&%%&̴&W]ۨ+/b{/11.Ro:uٟ@h0t֍rw@r
+Kx%&&v̼{A~w4)c-e}B<#&:ߙ
+M\\Lg	֥K0@RRֱc'ߞa_סc13i1?}8r/>suyK.г垽\ٳ/p@_;;$v{~3'j>:@%_A!t|%&%1
+yu6aҔ{ǎT		^ݧ_K_~{XB|"KL s|S!µ0Nn?PoJqW
+&#ƍ&#$᭡ xi{	Ʃ &VS
+d&0v,Vرo a:]x7॥-_f͚E
+M 48G@&? 0|CoA_yYLm!0v";mfoćA/J|Ca50 A?|;a=
+`V
+Cb!!@0Q
+
+
+_Pǌ(9Fxa|>}W`>ܭlȐ٠AP2pVAzW}^/mKcsAٛC߅
+jH!c 9f<{wn?E}8hpo}{TL{i!C/L
+H ƍȦL޿3Ł0[C@ @ @ >    IENDB`
+
+Conteúdo de chat-input.js:
+class ChatInput {
+  constructor(inputElement, dropdownContainer) {
+    this.input = inputElement;
+    this.dropdown = dropdownContainer;
+    this.setupEventListeners();
+  }
+
+  setupEventListeners() {
+    this.input.addEventListener('input', () => this.handleInput());
+    this.input.addEventListener('keydown', (e) => this.handleKeydown(e));
+    document.addEventListener('click', (e) => this.handleClickOutside(e));
+  }
+
+  handleInput() {
+    const text = this.input.value;
+    if (text.startsWith('/')) {
+      const suggestions = filterCommands(text);
+      this.showSuggestions(suggestions);
+    } else {
+      this.hideSuggestions();
+    }
+  }
+
+  handleKeydown(e) {
+    if (e.key === 'Tab' && this.dropdown.classList.contains('active')) {
+      e.preventDefault();
+      const suggestions = this.dropdown.querySelectorAll('.command-item');
+      if (suggestions.length > 0) {
+        const command = suggestions[0].dataset.command;
+        this.selectCommand(command);
+      }
+    }
+  }
+
+  handleClickOutside(e) {
+    if (!this.dropdown.contains(e.target) && e.target !== this.input) {
+      this.hideSuggestions();
+    }
+  }
+
+  showSuggestions(suggestions) {
+    this.dropdown.innerHTML = suggestions
+      .map(({ command, description }) => `
+        <div class="command-item" data-command="${command}">
+          <span class="command-name">${command}</span>
+          <span class="command-description">${description}</span>
+        </div>
+      `)
+      .join('');
+
+    this.dropdown.classList.add('active');
+
+    // Adiciona listeners para os itens
+    this.dropdown.querySelectorAll('.command-item').forEach(item => {
+      item.addEventListener('click', () => {
+        this.selectCommand(item.dataset.command);
+      });
+    });
+  }
+
+  hideSuggestions() {
+    this.dropdown.classList.remove('active');
+  }
+
+  selectCommand(command) {
+    this.input.value = command;
+    this.input.focus();
+    this.hideSuggestions();
+  }
+}
+
+Conteúdo de chat-state.js:
+// Gerenciamento do estado do chat
+const chatState = {
+  mode: 'normal', // 'normal' ou 'summary'
+  currentConversationId: null,
+  
+  setMode(newMode) {
+    this.mode = newMode;
+  },
+  
+  setConversationId(id) {
+    this.currentConversationId = id;
+  },
+  
+  isInSummaryMode() {
+    return this.mode === 'summary';
+  }
+};
+
+Conteúdo de chat.js:
+document.addEventListener('DOMContentLoaded', function () {
+    const messagesContainer = document.getElementById('chat-messages');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const newChatButton = document.getElementById('new-chat-btn');
+    const conversationItems = document.querySelectorAll('.conversation-item');
+    const typingIndicator = document.getElementById('typing-indicator');
+    let currentMessageDiv = null; // Para rastrear a mensagem que está sendo atualizada
+
+    function showMessage(content, type = 'assistant') {
+        if (!currentMessageDiv || type !== 'assistant') {
+            // Cria nova mensagem apenas se não for incremental ou for do usuário
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            messageDiv.textContent = content;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            if (type === 'assistant') currentMessageDiv = messageDiv; // Atualiza o rastreador
+            return messageDiv;
+        }
+        // Atualiza mensagem existente para o assistente
+        currentMessageDiv.textContent += content;
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        return currentMessageDiv;
+    }
+
+    async function handleMessage(message) {
+        showMessage(message, 'user'); // Mostra a mensagem do usuário
+        messageInput.value = '';
+        typingIndicator.style.display = 'block';
+
+        try {
+            const response = await fetch('/send_message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message,
+                    conversation_id: chatState.currentConversationId,
+                }),
+            });
+
+            if (response.ok && response.body) {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let done = false;
+                currentMessageDiv = null; // Reset para uma nova resposta
+
+                while (!done) {
+                    const { value, done: streamDone } = await reader.read();
+                    done = streamDone;
+                    if (value) {
+                        const chunk = decoder.decode(value, { stream: true });
+                        try {
+                            if (chunk.includes('data: ')) {
+                                const jsonString = chunk.split('data: ')[1].trim();
+                                if (jsonString && jsonString !== '[DONE]') {
+                                    const json = JSON.parse(jsonString);
+                                    if (json.content) {
+                                        showMessage(json.content, 'assistant'); // Atualiza mensagem incremental
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error('[Debug] Erro ao processar chunk:', chunk, e);
+                        }
+                    }
+                }
+
+                typingIndicator.style.display = 'none';
+            } else {
+                throw new Error('Resposta inválida do servidor');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            showMessage('Erro ao processar sua mensagem.', 'system');
+            typingIndicator.style.display = 'none';
+        }
+    }
+
+    async function loadConversation(conversationId) {
+        try {
+            const response = await fetch(`/get_conversation/${conversationId}`);
+            const conversation = await response.json();
+
+            messagesContainer.innerHTML = ''; // Limpa mensagens anteriores
+
+            conversation.messages.forEach((msg) => {
+                showMessage(msg.content, msg.role);
+            });
+
+            chatState.setConversationId(conversationId); // Atualiza ID atual
+
+            document.querySelectorAll('.conversation-item').forEach((item) => {
+                item.classList.remove('active');
+                if (item.dataset.id === conversationId) {
+                    item.classList.add('active');
+                }
+            });
+        } catch (error) {
+            console.error('Erro ao carregar conversa:', error);
+            showMessage('Erro ao carregar conversa.', 'system');
+        }
+    }
+
+    sendButton.addEventListener('click', () => {
+        const message = messageInput.value.trim();
+        if (message) {
+            handleMessage(message);
+        }
+    });
+
+    messageInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            const message = this.value.trim();
+            if (message) {
+                handleMessage(message);
+            }
+        }
+    });
+
+    newChatButton.addEventListener('click', () => {
+        chatState.setConversationId(null); // Resetar ID da conversa
+        chatState.setMode('normal');
+        messagesContainer.innerHTML = '';
+        messageInput.value = '';
+        messageInput.focus();
+
+        document.querySelectorAll('.conversation-item.active').forEach((item) =>
+            item.classList.remove('active')
+        );
+
+        const newChatPlaceholder = document.createElement('div');
+        newChatPlaceholder.className = 'conversation-item active';
+        newChatPlaceholder.dataset.id = 'new';
+        newChatPlaceholder.innerHTML = `
+            <span class="conversation-preview">Novo Chat...</span>
+            <span class="conversation-date">${new Date().toISOString().split('T')[0]}</span>
+        `;
+        document.querySelector('.conversation-list').prepend(newChatPlaceholder);
+    });
+
+    conversationItems.forEach((item) => {
+        item.addEventListener('click', function () {
+            const conversationId = this.dataset.id;
+            loadConversation(conversationId);
+        });
+    });
+});
+
+
+Conteúdo de chat.js.old:
+document.addEventListener('DOMContentLoaded', function() {
+    const messagesContainer = document.getElementById('chat-messages');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const newChatButton = document.getElementById('new-chat-btn');
+    const conversationItems = document.querySelectorAll('.conversation-item');
+
+    function showMessage(content, type = 'assistant') {
+        const messagesContainer = document.getElementById('chat-messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}-message`;
+        messageDiv.textContent = content; // Define apenas o texto da mensagem
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Rolagem automática
+    }
+
+    async function simulateTyping(text, element) {
+        let index = 0;
+        element.textContent = '';
+        
+        return new Promise(resolve => {
+            function type() {
+                if (index < text.length) {
+                    element.textContent += text[index];
+                    index++;
+                    setTimeout(type, 20);
+                } else {
+                    resolve();
+                }
+            }
+            type();
+        });
+    }
+
+    async function handleMessage(message) {
+        // Verifica se é um comando
+        if (handleCommand(message)) {
+            return;
+        }
+
+        // Processa o texto baseado no modo atual
+        if (chatState.isInSummaryMode()) {
+            await processSummaryText(message);
+            chatState.setMode('normal'); // Volta ao modo normal após processar
+        } else {
+            await sendRegularMessage(message);
+        }
+    }
+
+    async function sendRegularMessage(message) {
+        showMessage(message, 'user'); // Mostra a mensagem do usuário
+        messageInput.value = '';
+    
+        const typingIndicator = document.getElementById('typing-indicator');
+        typingIndicator.style.display = 'block';
+    
+        try {
+            const response = await fetch('/send_message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message,
+                    conversation_id: chatState.currentConversationId,
+                }),
+            });
+    
+            const data = await response.json(); // Parse do JSON
+            const finalResponse = data.response; // Extrai o valor da propriedade 'response'
+            showMessage(finalResponse, 'assistant'); // Mostra o texto no chat
+            typingIndicator.style.display = 'none';
+        } catch (error) {
+            console.error('Erro:', error);
+            showMessage('Erro ao processar sua mensagem.', 'system');
+            typingIndicator.style.display = 'none';
+        }
+    }
+    
+    async function loadConversation(conversationId) {
+        try {
+            const response = await fetch(`/get_conversation/${conversationId}`);
+            const conversation = await response.json();
+            
+            // Limpa mensagens anteriores
+            messagesContainer.innerHTML = '';
+            
+            // Mostra todas as mensagens da conversa
+            conversation.messages.forEach(msg => {
+                showMessage(msg.content, msg.role);
+            });
+            
+            // Atualiza ID da conversa atual
+            chatState.setConversationId(conversationId);
+            
+            // Atualiza visual do item selecionado
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.id === conversationId) {
+                    item.classList.add('active');
+                }
+            });
+        } catch (error) {
+            console.error('Erro ao carregar conversa:', error);
+            showMessage('Erro ao carregar conversa.', 'system');
+        }
+    }
+
+    // Event Listeners
+    sendButton.addEventListener('click', () => {
+        const message = messageInput.value.trim();
+        if (message) {
+            handleMessage(message);
+        }
+    });
+    
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            const message = this.value.trim();
+            if (message) {
+                handleMessage(message);
+            }
+        }
+    });
+
+    newChatButton.addEventListener('click', () => {
+        chatState.setConversationId(null); // Garante que o ID da conversa é resetado
+        chatState.setMode('normal');
+        messagesContainer.innerHTML = '';
+        messageInput.value = '';
+        messageInput.focus();
+    
+        // Remove a seleção de chats anteriores no frontend
+        document.querySelectorAll('.conversation-item.active')
+            .forEach(item => item.classList.remove('active'));
+        
+        // Adiciona uma entrada de placeholder para novos chats no histórico
+        const newChatPlaceholder = document.createElement('div');
+        newChatPlaceholder.className = 'conversation-item active';
+        newChatPlaceholder.dataset.id = 'new';
+        newChatPlaceholder.innerHTML = `
+            <span class="conversation-preview">Novo Chat...</span>
+            <span class="conversation-date">${new Date().toISOString().split('T')[0]}</span>
+        `;
+        document.querySelector('.conversation-list').prepend(newChatPlaceholder);
+    });
+   
+
+    conversationItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const conversationId = this.dataset.id;
+            loadConversation(conversationId);
+        });
+    });
+});
+
+Conteúdo de commands.js:
+// Comandos disponíveis
+const commands = {
+  '/resumo': {
+    description: 'Ativa o modo de resumo de texto',
+    handler: () => {
+      chatState.setMode('summary');
+      showMessage('Modo resumo ativado. Cole seu texto para resumir.', 'system');
+    }
+  },
+  '/help': {
+    description: 'Mostra ajuda sobre comandos disponíveis',
+    handler: () => {
+      showCommandsList();
+    }
+  },
+  '/settings': {
+    description: 'Configurações do chat',
+    handler: () => {
+      showMessage('Configurações ainda não implementadas.', 'system');
+    }
+  },
+  '/about': {
+    description: 'Informações sobre o bot',
+    handler: () => {
+      showMessage('Chat Assistant v1.0 - Powered by Gemma AI', 'system');
+    }
+  },
+  '/feedback': {
+    description: 'Enviar feedback',
+    handler: () => {
+      showMessage('Sistema de feedback em desenvolvimento.', 'system');
+    }
+  },
+  '/exit': {
+    description: 'Volta ao modo normal de chat',
+    handler: () => {
+      chatState.setMode('normal');
+      showMessage('Modo normal ativado.', 'system');
+    }
+  }
+};
+
+function handleCommand(text) {
+  if (!text.startsWith('/')) return false;
+  
+  const command = commands[text];
+  if (command) {
+    command.handler();
+    return true;
+  }
+  
+  return false;
+}
+
+function filterCommands(prefix) {
+  return Object.entries(commands)
+    .filter(([cmd]) => cmd.startsWith(prefix))
+    .map(([cmd, info]) => ({
+      command: cmd,
+      description: info.description
+    }));
+}
+
+function showCommandsList() {
+  const commandsList = Object.entries(commands)
+    .map(([cmd, info]) => `${cmd}: ${info.description}`)
+    .join('\n');
+    
+  showMessage(`Comandos disponíveis:\n${commandsList}`, 'system');
+}
+
+Conteúdo de summary-processor.js:
+// Processamento de resumos
+const WORDS_PER_CHUNK = 300;
+
+async function processSummaryText(text) {
+  const chunks = splitTextIntoChunks(text, WORDS_PER_CHUNK);
+  const summaries = [];
+  
+  for (const chunk of chunks) {
+    const summary = await sendForSummary(chunk);
+    summaries.push(summary);
+    
+    // Mostra cada resumo conforme é processado
+    showMessage(summary, 'assistant');
+  }
+  
+  return summaries.join('\n\n');
+}
+
+function splitTextIntoChunks(text, wordsPerChunk) {
+  const words = text.split(/\s+/);
+  const chunks = [];
+  
+  for (let i = 0; i < words.length; i += wordsPerChunk) {
+    chunks.push(words.slice(i, i + wordsPerChunk).join(' '));
+  }
+  
+  return chunks;
+}
+
+async function sendForSummary(text) {
+  const instructions = `Quero que você responda somente em Português do Brasil. Por favor, leia a parte da transcrição do vídeo e siga as instruções que lhe dou abaixo. Se as instruções não forem especificadas ou não estiverem claras, simplesmente resuma a transcrição para mim em um único parágrafo.
+
+[INSTRUCTIONS]: Por favor, faça um resumo completo e detalhado, com explicações dos pontos principais, enumerando os tópicos mais importantes e expandindo em cada um deles de forma a não omitir nenhuma informação relevante do texto original. Certifique-se de PONTUAR e explicar OS pontos discutidos.`;
+
+  const response = await fetch('/send_message', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ 
+      message: text,
+      instructions,
+      mode: 'summary',
+      conversation_id: chatState.currentConversationId
+    })
+  });
+  
+  const data = await response.json();
+  return data.response;
+}
+
+Conteúdo de index.html:
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat com IA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/command-dropdown.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Histórico</h2>
+                <button id="new-chat-btn" class="new-chat-button">Novo Chat</button>
+            </div>
+            <div class="conversation-list">
+                {% for conversation in conversations %}
+                <div class="conversation-item" data-id="{{ conversation.id }}">
+                    <span class="conversation-preview">{{ conversation.messages[0].content[:50] }}...</span>
+                    <span class="conversation-date">{{ conversation.timestamp.split('T')[0] }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages"></div>
+            <!-- Adicione o indicador de digitação aqui -->
+            <div class="typing-indicator" id="typing-indicator" style="display: none;">
+                <span>Digitando...</span>
+            </div>
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <div id="command-dropdown" class="command-dropdown"></div>
+                    <textarea 
+                        id="message-input" 
+                        placeholder="Digite / para ver os comandos disponíveis"
+                        rows="3"
+                    ></textarea>
+                </div>
+                <button id="send-button">Enviar</button>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/chat-state.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/commands.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chat-input.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/summary-processor.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <script>
+        // Inicializa o input com dropdown
+        new ChatInput(
+            document.getElementById('message-input'),
+            document.getElementById('command-dropdown')
+        );
+    </script>
+</body>
+</html>
+
+Conteúdo de chat_history.py:
+import json
+from datetime import datetime
+import os
+
+HISTORY_FILE = 'data/chat_history.json'
+
+def ensure_data_directory():
+    os.makedirs('data', exist_ok=True)
+
+def get_conversation_history():
+    ensure_data_directory()
+    try:
+        if os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return []
+    except json.JSONDecodeError as e:
+        print(f"Erro ao carregar histórico: {str(e)}")
+        return []  # Retorna uma lista vazia em caso de erro
+    except Exception as e:
+        print(f"Erro ao carregar histórico: {str(e)}")
+        return []  # Retorna uma lista vazia em caso de erro
+
+def get_conversation_by_id(conversation_id):
+    """Busca uma conversa específica pelo ID"""
+    conversations = get_conversation_history()
+    for conversation in conversations:
+        if conversation['id'] == conversation_id:
+            return conversation
+    return None
+  
+def save_conversation(message, response, conversation_id=None):
+    """
+    Salva ou atualiza uma conversa no histórico.
+    Se conversation_id for fornecido, atualiza a conversa existente.
+    Caso contrário, cria uma nova conversa.
+    """
+    ensure_data_directory()
+    try:
+        # Carrega o histórico atual
+        conversations = get_conversation_history()
+        
+        if conversation_id:
+            # Atualiza conversa existente
+            updated = False
+            for conversation in conversations:
+                if conversation['id'] == conversation_id:
+                    conversation['messages'].extend([
+                        {'role': 'user', 'content': message},
+                        {'role': 'assistant', 'content': response}
+                    ])
+                    conversation['timestamp'] = datetime.now().isoformat()
+                    updated = True
+                    break
+            
+            # Se não encontrou o ID, cria uma nova conversa (backup seguro)
+            if not updated:
+                conversation_id = str(len(conversations) + 1)
+                new_conversation = {
+                    'id': conversation_id,
+                    'timestamp': datetime.now().isoformat(),
+                    'messages': [
+                        {'role': 'user', 'content': message},
+                        {'role': 'assistant', 'content': response}
+                    ]
+                }
+                conversations.append(new_conversation)
+        else:
+            # Cria nova conversa
+            conversation_id = str(len(conversations) + 1)
+            new_conversation = {
+                'id': conversation_id,
+                'timestamp': datetime.now().isoformat(),
+                'messages': [
+                    {'role': 'user', 'content': message},
+                    {'role': 'assistant', 'content': response}
+                ]
+            }
+            conversations.append(new_conversation)
+        
+        # Salva as conversas atualizadas
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(conversations, f, ensure_ascii=False, indent=2)
+        
+        return conversation_id
+    except Exception as e:
+        print(f"Erro ao salvar conversa: {str(e)}")
+        return None
+ 
+
+Conteúdo de text_processor.py:
+def split_text(text, words_per_chunk=300):
+    """
+    Divide um texto em chunks menores baseado no número de palavras.
+    """
+    words = text.split()
+    chunks = []
+    
+    for i in range(0, len(words), words_per_chunk):
+        chunk = ' '.join(words[i:i + words_per_chunk])
+        chunks.append(chunk)
+    
+    return chunks
+
+Conteúdo de chat_history.cpython-311.pyc:
+
+
+    Iwg                     @    d dl Z d dlmZ d dlZdZd Zd Zd ZddZdS )	    N)datetimezdata/chat_history.jsonc                  2    t          j        dd           d S )NdataT)exist_ok)osmakedirs     Ec:\Users\Usuario\Desktop\linha do tempo sagrada\utils\chat_history.pyensure_data_directoryr      s    K&&&&&&r
+   c                     t                       	 t          j                            t                    rCt          t          dd          5 } t
+          j        |           cd d d            S # 1 swxY w Y   g S # t          j        $ r+}t          dt          |                      g cY d }~S d }~wt          $ r+}t          dt          |                      g cY d }~S d }~ww xY w)Nrutf-8encodingu   Erro ao carregar histórico: )r   r   pathexistsHISTORY_FILEopenjsonloadJSONDecodeErrorprintstr	Exception)fes     r   get_conversation_historyr   
+   s5   
+
+7>>,'' 	$lC'::: 
+$ay||
+$ 
+$ 
+$ 
+$ 
+$ 
+$ 
+$ 
+$ 
+$ 
+$ 
+$ 
+$ 
+$ 
+$ 
+$ 
+$	   
+6c!ff66777						   
+6c!ff66777						sS   ;A9 A,A9 ,A00A9 3A04A9 9C& B.(C&.
+C&; C!C&!C&c                 L    t                      }|D ]}|d         | k    r|c S dS )u&   Busca uma conversa específica pelo IDidN)r   )conversation_id
+conversationsconversations      r   get_conversation_by_idr$      sB    ,..M%    00 14r
+   c                    t                       	 t                      }|rd}|D ]]}|d         |k    rO|d                             d| dd|dg           t          j                                                    |d<   d} n^|set
+          t          |          d	z             }|t          j                                                    d| dd|dgd
+}|                    |           net
+          t          |          d	z             }|t          j                                                    d| dd|dgd
+}|                    |           t          t          dd
+          5 }t          j        ||dd           ddd           n# 1 swxY w Y   |S # t          $ r*}t          dt
+          |                      Y d}~dS d}~ww xY w)u   
+    Salva ou atualiza uma conversa no histórico.
+    Se conversation_id for fornecido, atualiza a conversa existente.
+    Caso contrário, cria uma nova conversa.
+    Fr    messagesuser)rolecontent	assistant	timestampT   )r    r+   r&   wr   r      )ensure_asciiindentNzErro ao salvar conversa: )r   r   extendr   now	isoformatr   lenappendr   r   r   dumpr   r   )	messageresponser!   r"   updatedr#   new_conversationr   r   s	            r   save_conversationr;       s    1022
+ $	3G - 
+ 
+%88 ,33!'G<<!,BB5    190H0H0J0JL-"GE 9  
+
+7"%c-&8&81&<"="=)!)!9!9!;!;!'G<<!,BB!$ $  $$%5666 "#m"4"4q"899O%%\^^5577#88(X>>    
+  !1222 ,g
+6
+6
+6 	F!ImQU1EEEE	F 	F 	F 	F 	F 	F 	F 	F 	F 	F 	F 	F 	F 	F 	F    
+2#a&&22333ttttts<   EF &F?F FF FF 
+G"GG)N)r   r   r   r   r   r   r$   r;   r	   r
+   r   <module>r<      sy           				'' ' '    8 8 8 8 8 8r
+   
+
+Conteúdo de chat_history.cpython-312.pyc:
+
+
+    Iwg                     >    d dl Z d dlmZ d dlZdZd Zd Zd ZddZy)	    N)datetimezdata/chat_history.jsonc                  2    t        j                  dd       y )NdataT)exist_ok)osmakedirs     6c:\Users\Usuario\Desktop\project\utils\chat_history.pyensure_data_directoryr      s    KK&r
+   c                     t                	 t        j                  j                  t              r1t        t        dd      5 } t
+        j                  |       cd d d        S g S # 1 sw Y   g S xY w# t        j                  $ r#}t        dt        |              g cY d }~S d }~wt        $ r#}t        dt        |              g cY d }~S d }~ww xY w)Nrutf-8encodingu   Erro ao carregar histórico: )r   r   pathexistsHISTORY_FILEopenjsonloadJSONDecodeErrorprintstr	Exception)fes     r   get_conversation_historyr   
+   s    
+
+77>>,'lC': 
+$ayy|
+$ 
+$	
+$	 
+-c!fX67	 
+-c!fX67	sS   5A/ A"	A/  A/ "A,'A/ ,A/ /CB C C,C
+C
+Cc                 >    t               }|D ]  }|d   | k(  s|c S  y)u&   Busca uma conversa específica pelo IDidN)r   )conversation_id
+conversationsconversations      r   get_conversation_by_idr$      s1    ,.M%  0  r
+   c                    t                	 t               }|rd}|D ]O  }|d   |k(  s|d   j                  d| dd|dg       t        j                         j                         |d<   d} n |st
+        t        |      d	z         }|t        j                         j                         d| dd|dgd
+}|j                  |       nVt
+        t        |      d	z         }|t        j                         j                         d| dd|dgd
+}|j                  |       t        t        dd
+      5 }t        j                  ||dd       ddd       |S # 1 sw Y   |S xY w# t        $ r!}t        dt
+        |              Y d}~yd}~ww xY w)u   
+    Salva ou atualiza uma conversa no histórico.
+    Se conversation_id for fornecido, atualiza a conversa existente.
+    Caso contrário, cria uma nova conversa.
+    Fr    messagesuser)rolecontent	assistant	timestampT   )r    r+   r&   wr   r      )ensure_asciiindentNzErro ao salvar conversa: )r   r   extendr   now	isoformatr   lenappendr   r   r   dumpr   r   )	messageresponser!   r"   updatedr#   new_conversationr   r   s	            r   save_conversationr;       s    102
+G - 
+%8 ,33!'G<!,B5  190H0H0JL-"G
+ "%c-&81&<"=)!)!9!9!;!'G<!,B!$  $$%56 "#m"4q"89O%%\\^557#8(X>  
+  !12 ,g
+6 	F!IImQU1E	F 	F  
+)#a&23s;   E  DE  /E		E  EE  E   	F
+)FF
+)N)r   r   r   r   r   r   r$   r;   r	   r
+   r   <module>r<      s'      	''8r
+   
+
+Conteúdo de text_processor.cpython-311.pyc:
+
+
+    
+wgM                         ddZ dS ),  c                     |                                  }g }t          dt          |          |          D ]7}d                    ||||z                      }|                    |           8|S )uK   
+    Divide um texto em chunks menores baseado no número de palavras.
+         )splitrangelenjoinappend)textwords_per_chunkwordschunksichunks         Gc:\Users\Usuario\Desktop\linha do tempo sagrada\utils\text_processor.py
+split_textr      sq     
+JJLLE
+F
+1c%jj/
+2
+2  q_!44566
+
+eM    N)r   )r    r   r   <module>r      s#        r   
+
+Conteúdo de text_processor.cpython-312.pyc:
+
+
+    
+wgM                         ddZ y),  c                     | j                         }g }t        dt        |      |      D ]*  }dj                  ||||z          }|j	                  |       , |S )uK   
+    Divide um texto em chunks menores baseado no número de palavras.
+         )splitrangelenjoinappend)textwords_per_chunkwordschunksichunks         8c:\Users\Usuario\Desktop\project\utils\text_processor.py
+split_textr      s]     
+JJLE
+F
+1c%j/
+2 q_!456
+
+e M    N)r   )r    r   r   <module>r      s
+   r   
+
+
+==========================================
+Estrutura de pastas:
+==========================================
+linha do tempo sagrada
+    app.py
+    codigo_completo.txt
+    requirements.txt
+    static
+        css
+            command-dropdown.css
+            style.css
+        favicon.ico
+        js
+            chat-input.js
+            chat-state.js
+            chat.js
+            chat.js.old
+            commands.js
+            summary-processor.js
+    templates
+        index.html
+    utils
+        chat_history.py
+        text_processor.py
+        __pycache__
+            chat_history.cpython-311.pyc
+            chat_history.cpython-312.pyc
+            text_processor.cpython-311.pyc
+            text_processor.cpython-312.pyc
+
+
+Conteúdo de requirements.txt:
+flask==3.0.2
+python-dotenv==1.0.1
+requests==2.31.0
+
+Conteúdo de command-dropdown.css:
+/* Estilos para o dropdown de comandos */
+.command-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  display: none;
+  z-index: 1000;
+}
+
+.command-dropdown.active {
+  display: block;
+}
+
+.command-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+}
+
+.command-item:hover {
+  background-color: #f5f5f5;
+}
+
+.command-item:last-child {
+  border-bottom: none;
+}
+
+.command-name {
+  font-weight: bold;
+  color: #1a73e8;
+}
+
+.command-description {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.chat-input-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+Conteúdo de style.css:
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
+}
+
+.app-container {
+    display: flex;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 300px;
+    background: white;
+    border-right: 1px solid #ddd;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.sidebar h2 {
+    margin: 0;
+    color: #1a1a1a;
+}
+
+.new-chat-button {
+    background-color: #0084ff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.new-chat-button:hover {
+    background-color: #0073e6;
+}
+
+.conversation-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.conversation-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.conversation-item:hover {
+    background-color: #f5f5f5;
+}
+
+.conversation-item.active {
+    background-color: #e3f2fd;
+}
+
+.conversation-preview {
+    display: block;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.conversation-date {
+    font-size: 12px;
+    color: #666;
+}
+
+.chat-container {
+    flex: 1;
+    background: white;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.message {
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    border-radius: 10px;
+    max-width: 80%;
+}
+
+.user-message {
+    background-color: #e3f2fd;
+    margin-left: auto;
+}
+
+.assistant-message {
+    background-color: #f5f5f5;
+}
+
+.chat-input-container {
+    padding: 20px;
+    border-top: 1px solid #eee;
+    display: flex; /* Alinha os elementos na horizontal */
+    gap: 10px; /* Adiciona espaçamento entre o campo e o botão */
+    width: 100%; /* O container ocupa toda a largura */
+}
+
+.chat-input-wrapper {
+    position: relative;
+    flex: 1;
+    width: 100%; /* Garante que o campo ocupe todo o espaço disponível */
+}
+
+#message-input {
+    flex: 1;
+    padding: 15px; /* Aumenta o espaçamento interno */
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    resize: none;
+    font-family: inherit;
+    font-size: 16px; /* Aumenta o tamanho da fonte */
+    width: 100%; /* Campo ocupa toda a largura disponível */
+    min-height: 80px; /* Define uma altura mínima confortável */
+    max-height: 200px; /* Limita a altura máxima */
+    overflow-y: auto; /* Permite rolagem vertical quando necessário */
+    box-sizing: border-box; /* Inclui padding e borda no cálculo do tamanho */
+}
+
+#send-button {
+    padding: 15px 20px;
+    font-size: 16px; /* Tamanho da fonte maior */
+    background-color: #0084ff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-align: center;
+}
+
+#send-button:hover {
+    background-color: #0073e6;
+}
+
+.typing-indicator {
+    padding: 10px;
+    font-style: italic;
+    color: #888;
+}
+
+Conteúdo de favicon.ico:
+           3     PNG
+
+   
+IHDR         \rf   orNTϢw  3fIDATx]|Uֿ,յ{yiUwO⧫NH kCV?WĲ  e!4Q)k*=y=RҐ|ܙIfG	e̽{ι@ @ !(!dF Ù)23@ 4	m߂s_
+!@n.	B+
+@4a$- ^D Á
+P,@h"
+H H R  @ @ HR  @ @ HR  @ @ HR  @ @ U( 9 
+ =yBX(BEA	`W z Zaip4`/	;¨vĳE[ݚ	dMCS@ Y%)p]ʄd*3P+ CWdAxCՂd2-?_',7,FP 7$rLX'4rH6wJa*JOY{9|;p(x ;1%K͖>3F=^)wX
+?ń%AHqhu`:tP1^Rkx0fRp]*߁"x~Y@X	<y=H;C 7D=31!,!Z`J>
+tp(C|
+<30 aڙ	xX{B/ki3=
+V!٠/!!bqi#d2ۆ+p, .jJϜ6_ ^k񜤌ݑze4q
+<J
+!`|8ޙ-L>.jH*47o>*$\0 nףBrMu1ʄ5!4͘9c%I/y=tڧN 7vٯ_t:`B`Q 
+3,.v%pCDN/cDn".=g^tlb+.m 
+wF|40`ka
+WR&S0pP*w7% ,Y>BC?<h^
+b20G\n4< {pu,߄?\\4@SmG(~r}4I&Єi W5WsרQ~R~'"v\_$wߢ.aGH	xě<aP'7Je$mS@i(	?!04RT Km-%$V%p,
+J:nQ[kgx7DW'(yrޮ$ƧVx>Lv^0R{>$"~B)Y`&4omxA>wgJߕ6sp'oym5ƺ~~WJಣH[Bel"RBYw=WU|O*) m;k$^e9Z\L~{%s(͒pK)*DGE\ Y
+mEݥy!0vqN&'?Os&2
+`i8VhFuC&
+w 뀫(5$f^^Y<4
+>t[P8	WqAi	8/
+
+ܭ:wJ9?:7=gG;/Bs}Vo=D y޷̏¿6,;>H̏Qh17`\.NTkoh^^*{vjH"X-XG-c Za/e!6f~+K`_v騮XHkAB[#n AxiAp?)n<j&ͪ'-f~Aީ,\^3:]Di5*\ ~R^=Q̤{@	K@O /磋l6:)m IHxRp45SBʫ뻜g%+~4S~O8b}X}Ofz\Ay\BD}Q}٩?{iK齡w9'Fkj?m5O%0~_2\^U̏nz+*GS'W5ZNu
+h~?o~׿΅@yq>*GLiQ=Iϐ~]<]ϪA	J:A8;[B7LѳBhܙb\	trǏv8ב7
+\C3j^.x;;Yڒ:X-ԻB=Z@(
+|Uj@QD3;i\y|Isl
+w\16C0RRN_=Q f0GM5Z+ :r~k^X{l!~/bg?7$ޒCD ~~.A5$\b)ZV5S!,X;-c%C%OS?ygc%ATTՏ.o2&O쳙~8C>u%Ug#CI/\;Tњo{f | J`nibH X)A{2hb F誫;ђ	߶!hR"W5Kz9)A|E`hOwL[	MfQy4'UoKcE*0GT </`hjمyOi)a7uCM4Mm
+!?ԉ(ݶOwVOֳ"H@_'Q{qߦwR_
+V 'Gp+י-ŏvaàioP(Xnc
+`Q<?,V>i:7`~`zyEj>jL CzT |TO~yȌz% B/hϽ87OI'ɥBЦ?hwtUagҊ@) 9oyhUjMtonN^D+Sع 0oU+hio
+uX
+v~r;&j31UӀIP7IA)3#t'ۂR`M K.0-AA" nhzva:
+ `r-|drD8 SOwL& 8tgr0 
+U濲/6Ʉ r
+8Y=Q$Pjp0(rя~sJw &$Ab8 UcWljGâ_:T%󿉖	S+OՀU禇R1mTntGlPj݀	p\
+ /
+	qU߽?o:KK<3>pzz*ڹ\`}LV //
+~S	p$eP6#u[%4Ju
+_~C9(<oL8bcr%@lX|_U-)&wbV|^	83BWR5Vצr4eWUOT {S>2R \[=1kX }Ñ_&i' '׿
+tzP)3 9i#|a1QcI 0aukT Р'z xqE2rrug?' F4^)jP9ZvvJ	u#
+zU 
+8RU ֚)!!ՓHH	48M]i=e:S |@`k
+z۽ ʑָ@L~`)
+zz;z7 X UV& PrDeIj g*ǐpex 	Gp̄{nQV'ϫ}B| &+] ņ(+A]p[]'B=jΩ/BO OiSL@QTOn⁆ #idD ת9Lp+$sSB׹`l22ĦKLt Y ՓJ	0K I׳%ʥ- jȌȿG0L3MyKtO:HہhW Ps>u!/aBCWg
+;73rDf*)Uu9	 Ml`A "^b0,;pP _P	Dµ9ѝWOg-#982"nq.4@)35XxW=!BZ8rn0A'/%T 1ʑ3#( tza}m} 3iAcL%2*{ʠ~]X8QzA$~Z0RwDX@:cC4w?Q=I
+@R9JgqD+0݀T4PI󐻠`& vpg'8pslfܬj)C6QEO{ٙmFwpzDg<9ORR85'?ȄI
+5ߴfe3WPdqw-HYל]y7eldesƖa:&<0QZ+=~ǁeqi`؄CFpFkn)`@Y9++0D-Fp8;G#9Bc2  \GyG	J!jma
+(;\
+8f'A
+TTV^p@dqI`4( c $H"Y
+?Ѡ'*yXd%`F) :AOTҞ1-pJqACXg	&U pEm\@GaIy5`
+~"Ѕ_peEH'd8A"$@Ghi
+P
+gLV[la$@([|H9FmYú{Ŀ穿E^??_ɽxK{`;.WdAIqV^T`/&b´/fr.MNr
+|H^R ou{-_{){k_*b,6R߫اhVPx̵o4M-7'h,
+
+f `%_	_|5-[2c~_~5[HMٴuT`qݽf}3[+/@3os/|||&>#>?JMm$.{alڲݕh>濕`qV`=gp$7X'x]|c~嬯\mݽf̜%MK
+ E~?|F|V_gemuo
+RiI]s`4fPB|
+WF{mN&%^J0)oWegd%l[po-_Cw(-[wn&v>Q>Py\?|g0iRqoff~YsfS) UJ$epBoAa}]P
+ A~7|6|Fml#*z;#OdK}O,`W,?PVV~+\v`heog'8i*E;8-7O;a=MfiDx_`[ȊM|y냕eVΛR7]/q)V\Z`pYvU0׬:ڍ3w?W?w_W\r'3Vl򊄲mWﱯϴ?/9&e3KAr9),پԽY
+i^#9ur
+wgsymذqY0`(gٓVvž~W&\-%{[nNU6A1٧
+f~i`2z5X]:߯\[Ĝ$WpUK ~'~g[U|kh509&Ӭ(  Z`fהUo,.S͚=Ww~jU	/F-^*R ɫ=|֯m]f屙6c9Nr#0-?Mez|]ޱsc9s׃vZjZ 9N̺
+ =Slkf"3-mU_~_57fN?
+~:U-'Pfa6hh	7{~8ttC>Θ7m. ~<3r?pWmmm
+:ȅr3WM`O&h*+a^@M0H:t$!qDřO^~73rwm&6m>~bZVf2`4%Ԡ+P5n3VD
+ɹ{߾k_v|ׯaj
+WFoٿ3(V|JJJ@yYō0`;ylTG_5ߥ^XZ
+b!J%R>Q7;[-VƬV*$q
+W
+*g2Dmݶc~,׿g
+!\M~"٪|lSl[e >I걧e?PLK	BSŉ'$+9)^aEs؛4V1Y}|Iu^eaJ ~2K6"ψ~<T
+j͆לpo~>M
+H{W+ ̅Uk<nњҾ<<|w+* }#L#xn8ZX0mnsw]mfc`<c63G 2VTӄ_U	ed:	ڽ׋]pE[Xw%JÎdv$;joRd/?RYOQ&`gNzDX1mw`2[
+~}Oa/vU囆W ;|I1wWX"ІؖĔjãynMh=-,f(*T
++
+m,r{qLVY#&M	-_\8y.q|G|gO?~vX]Lr~-.c4	j{J*1 8֟3vIu0US=ȸ kzTOgqzX` ffcn|iv6ƵBE.G
+M/8vh- ٟ
+$#WU`fMMkA/]^wP)J [N`Kn-ў\|_~]wFNض7f~??b߃>t/(@3t<T5SUV 
+j?(\rc_Zغ}篦 g|Xntd^.ywu]VfWn5pv6Npr) XT55M!aMdrظiGâ$8 3pQ{V.['Iy`g J?sיvfO*PJ8m?5=nsn0zbs7X9W[&( ^!_{.bMU?mT߳dYCP4=o2-L`_/8UpApY*ytŦMN6hsb+#A_zђe8CG\=ܞrT)ÛՇt໹n؇dsNv[ҫ4	>~be'
+|TmUcmva[i`f(r]
+ ]*WvI+&9n6T~fyKU~zw2{I	
+h(¥evT }NIqsx]>]B7gמ*tWYdtvi3-wr{PZY),pι 
+bD~AQs裡?eҪ@MR!(8)]*;k
+@ݮrL.}Q 珪owڳ -T\{~i=6#0+,·Z;"],"[-U͸[ptT~
+9* Rw*Ni+VLy9ժ3-h2%4x!ъ+Ca~|nݦ]>ZE
+]{LཔςO/ҞQjX\Wa_>dޏ>
+%G J"89BV+H$t.\
+/
++F'wʅ\*Nq]gBjW{q10YO>
+16~
+T pi3/e?L4Zgt( 9MYqȅ{!&1Me;}QsL&ay̖G৩3!3	iHMP Efx}םL.,6
+@<#Ӿ?s; ~v&B7klxߺज़}>mm2ǫd>}mjk0RK4`z8
+t3	]&!(2a?akK wYLߺK
+y,?}3?ޯyk1Lfk#GG'~:0+xI h~\  /  ('.o
+gǥ>W?cbi{䈑YybuںaG`ԧI	\c4 1j;Pq0xz/vgϋzmD֧gڙEgfD$\ľ},7,2r7Pp`qE],,:M\6oLrM_R w>MZ#IH
+e n؀;(Bi=l[P౪ͼž4 )~?RHcB=(-9.=^1N\~|~򿇏d3{Qf{^
+RF%Mg?AJ߹𧇷?i_R~r%<m13-/~z`	{LEMJ3 |.շucʎ*n#aw^JSXe&ӁGygW{H	/V㬀C^XNBƁ?
+bපMb3ݿmWUeơrVQVġ~qOcǮ6@9/R$WUxIq%?g
+='Ϸro[,
+ 	U~%rA  kzs
+&-g}az ῪϟCs6,g7USb; 3
+g_(DJO5-S͞ǬG	Pp ) wyWKbڂTCo<;7/f[B*%Ε\'"X?῅N[\#Z
+*/ԝ=dN?,">kLWoȔ2Vczй}u};3X=bQEW>ꕀ8 %@g:m44p6t{(P^.'0?`T/
+=riy-;ٮM9/;}4fp®Ø!Pb 3݀vXoCWw>@7A5 38v2#Ҟ{HF)jEȝʄalwX8q\	tU,n)qp׏Vc
+!/+[ݲX)Zl6fͧAhz8V\@ d&`s?,֧F3;}'
+Bĉ'!A`
+8L//
+@ 4]%y@0	V{V:@T|9}QFKlu17Hz .{zO~el~+:@w*a# Du?߲c/'
+@.Rfkf@-tY~o1Ylmf+G 4()-ee'P3V<1'an>	?<.@9?f^*S 	1'mYoiZRجlrkh=@`-g@pNbBMcS}Of_MDfϵ
+әylyQ%
+̜|Wd/d4_3
+Q //YAmhf"f
+@<,<#kߴ]{
+;wiܺ}y:nٺMس7uõC ,l\6!W_;?!Bc/Y\.
+ݟ>j3zӳWs@򅞽퓄vm.ZKI ^^9XJ 1zQ1B|\0Pԑ) @
+@   3D  `]D%|v1G^zˀ)ccY:@(ICcc2'$^
+11q* )Cp}.nQħQ $?۵{ AVuA 2EHL xrbn R sb)@ GvA wk1Bw sԳ,6nѮ];6=7ٶߵk]u->/$ķ ؘ -L|;r 1mcY3YnYzƜtNlLKx:>K?(@ @
+@ @
+@ @
+@ @
+@R`:pth֥K@_5cJ"<"**E?:=ޱYgLJE]/:wAaW+ `lt삨<T_l׎	hY'nA2/p
+0>.
+  EEGB$,iމ6 7[wA ֶ߉:@pv+>J`0:
+r31ܺ!,1+s#..acRRK@1Or~ޡ{4|3) ǰu<{[X;uJ/Ƿ#&6/iFO x	b"POO5FХK7!&:֕IO|..6E?՞:@za={
+ail3?;+P GZSG)ެO>{=1_྿*@1qK:wrcRbH|5ֱC'dBRb3:uw=Cx*\I1qLHу%ķgnucj0aw2!ӍYΝ#	.k>%%u{}c_!!}xBB"ԉ:@Re		Iav]	3&LlM?Bc׮l؄,6&%%&̴&W]ۨ+/b{/11.Ro:uٟ@h0t֍rw@r
+Kx%&&v̼{A~w4)c-e}B<#&:ߙ
+M\\Lg	֥K0@RRֱc'ߞa_סc13i1?}8r/>suyK.г垽\ٳ/p@_;;$v{~3'j>:@%_A!t|%&%1
+yu6aҔ{ǎT		^ݧ_K_~{XB|"KL s|S!µ0Nn?PoJqW
+&#ƍ&#$᭡ xi{	Ʃ &VS
+d&0v,Vرo a:]x7॥-_f͚E
+M 48G@&? 0|CoA_yYLm!0v";mfoćA/J|Ca50 A?|;a=
+`V
+Cb!!@0Q
+
+
+_Pǌ(9Fxa|>}W`>ܭlȐ٠AP2pVAzW}^/mKcsAٛC߅
+jH!c 9f<{wn?E}8hpo}{TL{i!C/L
+H ƍȦL޿3Ł0[C@ @ @ >    IENDB`
+
+Conteúdo de chat-input.js:
+class ChatInput {
+  constructor(inputElement, dropdownContainer) {
+    this.input = inputElement;
+    this.dropdown = dropdownContainer;
+    this.setupEventListeners();
+  }
+
+  setupEventListeners() {
+    this.input.addEventListener('input', () => this.handleInput());
+    this.input.addEventListener('keydown', (e) => this.handleKeydown(e));
+    document.addEventListener('click', (e) => this.handleClickOutside(e));
+  }
+
+  handleInput() {
+    const text = this.input.value;
+    if (text.startsWith('/')) {
+      const suggestions = filterCommands(text);
+      this.showSuggestions(suggestions);
+    } else {
+      this.hideSuggestions();
+    }
+  }
+
+  handleKeydown(e) {
+    if (e.key === 'Tab' && this.dropdown.classList.contains('active')) {
+      e.preventDefault();
+      const suggestions = this.dropdown.querySelectorAll('.command-item');
+      if (suggestions.length > 0) {
+        const command = suggestions[0].dataset.command;
+        this.selectCommand(command);
+      }
+    }
+  }
+
+  handleClickOutside(e) {
+    if (!this.dropdown.contains(e.target) && e.target !== this.input) {
+      this.hideSuggestions();
+    }
+  }
+
+  showSuggestions(suggestions) {
+    this.dropdown.innerHTML = suggestions
+      .map(({ command, description }) => `
+        <div class="command-item" data-command="${command}">
+          <span class="command-name">${command}</span>
+          <span class="command-description">${description}</span>
+        </div>
+      `)
+      .join('');
+
+    this.dropdown.classList.add('active');
+
+    // Adiciona listeners para os itens
+    this.dropdown.querySelectorAll('.command-item').forEach(item => {
+      item.addEventListener('click', () => {
+        this.selectCommand(item.dataset.command);
+      });
+    });
+  }
+
+  hideSuggestions() {
+    this.dropdown.classList.remove('active');
+  }
+
+  selectCommand(command) {
+    this.input.value = command;
+    this.input.focus();
+    this.hideSuggestions();
+  }
+}
+
+Conteúdo de chat-state.js:
+// Gerenciamento do estado do chat
+const chatState = {
+  mode: 'normal', // 'normal' ou 'summary'
+  currentConversationId: null,
+  
+  setMode(newMode) {
+    this.mode = newMode;
+  },
+  
+  setConversationId(id) {
+    this.currentConversationId = id;
+  },
+  
+  isInSummaryMode() {
+    return this.mode === 'summary';
+  }
+};
+
+Conteúdo de chat.js:
+document.addEventListener('DOMContentLoaded', function () {
+    const messagesContainer = document.getElementById('chat-messages');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const newChatButton = document.getElementById('new-chat-btn');
+    const conversationItems = document.querySelectorAll('.conversation-item');
+    const typingIndicator = document.getElementById('typing-indicator');
+    let currentMessageDiv = null; // Para rastrear a mensagem que está sendo atualizada
+
+    function showMessage(content, type = 'assistant') {
+        if (!currentMessageDiv || type !== 'assistant') {
+            // Cria nova mensagem apenas se não for incremental ou for do usuário
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            messageDiv.textContent = content;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            if (type === 'assistant') currentMessageDiv = messageDiv; // Atualiza o rastreador
+            return messageDiv;
+        }
+        // Atualiza mensagem existente para o assistente
+        currentMessageDiv.textContent += content;
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        return currentMessageDiv;
+    }
+
+    async function handleMessage(message) {
+        showMessage(message, 'user'); // Mostra a mensagem do usuário
+        messageInput.value = '';
+        typingIndicator.style.display = 'block';
+
+        try {
+            const response = await fetch('/send_message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message,
+                    conversation_id: chatState.currentConversationId,
+                }),
+            });
+
+            if (response.ok && response.body) {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let done = false;
+                currentMessageDiv = null; // Reset para uma nova resposta
+
+                while (!done) {
+                    const { value, done: streamDone } = await reader.read();
+                    done = streamDone;
+                    if (value) {
+                        const chunk = decoder.decode(value, { stream: true });
+                        try {
+                            if (chunk.includes('data: ')) {
+                                const jsonString = chunk.split('data: ')[1].trim();
+                                if (jsonString && jsonString !== '[DONE]') {
+                                    const json = JSON.parse(jsonString);
+                                    if (json.content) {
+                                        showMessage(json.content, 'assistant'); // Atualiza mensagem incremental
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error('[Debug] Erro ao processar chunk:', chunk, e);
+                        }
+                    }
+                }
+
+                typingIndicator.style.display = 'none';
+            } else {
+                throw new Error('Resposta inválida do servidor');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            showMessage('Erro ao processar sua mensagem.', 'system');
+            typingIndicator.style.display = 'none';
+        }
+    }
+
+    async function loadConversation(conversationId) {
+        try {
+            const response = await fetch(`/get_conversation/${conversationId}`);
+            const conversation = await response.json();
+
+            messagesContainer.innerHTML = ''; // Limpa mensagens anteriores
+
+            conversation.messages.forEach((msg) => {
+                showMessage(msg.content, msg.role);
+            });
+
+            chatState.setConversationId(conversationId); // Atualiza ID atual
+
+            document.querySelectorAll('.conversation-item').forEach((item) => {
+                item.classList.remove('active');
+                if (item.dataset.id === conversationId) {
+                    item.classList.add('active');
+                }
+            });
+        } catch (error) {
+            console.error('Erro ao carregar conversa:', error);
+            showMessage('Erro ao carregar conversa.', 'system');
+        }
+    }
+
+    sendButton.addEventListener('click', () => {
+        const message = messageInput.value.trim();
+        if (message) {
+            handleMessage(message);
+        }
+    });
+
+    messageInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            const message = this.value.trim();
+            if (message) {
+                handleMessage(message);
+            }
+        }
+    });
+
+    newChatButton.addEventListener('click', () => {
+        chatState.setConversationId(null); // Resetar ID da conversa
+        chatState.setMode('normal');
+        messagesContainer.innerHTML = '';
+        messageInput.value = '';
+        messageInput.focus();
+
+        document.querySelectorAll('.conversation-item.active').forEach((item) =>
+            item.classList.remove('active')
+        );
+
+        const newChatPlaceholder = document.createElement('div');
+        newChatPlaceholder.className = 'conversation-item active';
+        newChatPlaceholder.dataset.id = 'new';
+        newChatPlaceholder.innerHTML = `
+            <span class="conversation-preview">Novo Chat...</span>
+            <span class="conversation-date">${new Date().toISOString().split('T')[0]}</span>
+        `;
+        document.querySelector('.conversation-list').prepend(newChatPlaceholder);
+    });
+
+    conversationItems.forEach((item) => {
+        item.addEventListener('click', function () {
+            const conversationId = this.dataset.id;
+            loadConversation(conversationId);
+        });
+    });
+});
+
+
+Conteúdo de chat.js.old:
+document.addEventListener('DOMContentLoaded', function() {
+    const messagesContainer = document.getElementById('chat-messages');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const newChatButton = document.getElementById('new-chat-btn');
+    const conversationItems = document.querySelectorAll('.conversation-item');
+
+    function showMessage(content, type = 'assistant') {
+        const messagesContainer = document.getElementById('chat-messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}-message`;
+        messageDiv.textContent = content; // Define apenas o texto da mensagem
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Rolagem automática
+    }
+
+    async function simulateTyping(text, element) {
+        let index = 0;
+        element.textContent = '';
+        
+        return new Promise(resolve => {
+            function type() {
+                if (index < text.length) {
+                    element.textContent += text[index];
+                    index++;
+                    setTimeout(type, 20);
+                } else {
+                    resolve();
+                }
+            }
+            type();
+        });
+    }
+
+    async function handleMessage(message) {
+        // Verifica se é um comando
+        if (handleCommand(message)) {
+            return;
+        }
+
+        // Processa o texto baseado no modo atual
+        if (chatState.isInSummaryMode()) {
+            await processSummaryText(message);
+            chatState.setMode('normal'); // Volta ao modo normal após processar
+        } else {
+            await sendRegularMessage(message);
+        }
+    }
+
+    async function sendRegularMessage(message) {
+        showMessage(message, 'user'); // Mostra a mensagem do usuário
+        messageInput.value = '';
+    
+        const typingIndicator = document.getElementById('typing-indicator');
+        typingIndicator.style.display = 'block';
+    
+        try {
+            const response = await fetch('/send_message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message,
+                    conversation_id: chatState.currentConversationId,
+                }),
+            });
+    
+            const data = await response.json(); // Parse do JSON
+            const finalResponse = data.response; // Extrai o valor da propriedade 'response'
+            showMessage(finalResponse, 'assistant'); // Mostra o texto no chat
+            typingIndicator.style.display = 'none';
+        } catch (error) {
+            console.error('Erro:', error);
+            showMessage('Erro ao processar sua mensagem.', 'system');
+            typingIndicator.style.display = 'none';
+        }
+    }
+    
+    async function loadConversation(conversationId) {
+        try {
+            const response = await fetch(`/get_conversation/${conversationId}`);
+            const conversation = await response.json();
+            
+            // Limpa mensagens anteriores
+            messagesContainer.innerHTML = '';
+            
+            // Mostra todas as mensagens da conversa
+            conversation.messages.forEach(msg => {
+                showMessage(msg.content, msg.role);
+            });
+            
+            // Atualiza ID da conversa atual
+            chatState.setConversationId(conversationId);
+            
+            // Atualiza visual do item selecionado
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.id === conversationId) {
+                    item.classList.add('active');
+                }
+            });
+        } catch (error) {
+            console.error('Erro ao carregar conversa:', error);
+            showMessage('Erro ao carregar conversa.', 'system');
+        }
+    }
+
+    // Event Listeners
+    sendButton.addEventListener('click', () => {
+        const message = messageInput.value.trim();
+        if (message) {
+            handleMessage(message);
+        }
+    });
+    
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            const message = this.value.trim();
+            if (message) {
+                handleMessage(message);
+            }
+        }
+    });
+
+    newChatButton.addEventListener('click', () => {
+        chatState.setConversationId(null); // Garante que o ID da conversa é resetado
+        chatState.setMode('normal');
+        messagesContainer.innerHTML = '';
+        messageInput.value = '';
+        messageInput.focus();
+    
+        // Remove a seleção de chats anteriores no frontend
+        document.querySelectorAll('.conversation-item.active')
+            .forEach(item => item.classList.remove('active'));
+        
+        // Adiciona uma entrada de placeholder para novos chats no histórico
+        const newChatPlaceholder = document.createElement('div');
+        newChatPlaceholder.className = 'conversation-item active';
+        newChatPlaceholder.dataset.id = 'new';
+        newChatPlaceholder.innerHTML = `
+            <span class="conversation-preview">Novo Chat...</span>
+            <span class="conversation-date">${new Date().toISOString().split('T')[0]}</span>
+        `;
+        document.querySelector('.conversation-list').prepend(newChatPlaceholder);
+    });
+   
+
+    conversationItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const conversationId = this.dataset.id;
+            loadConversation(conversationId);
+        });
+    });
+});
+
+Conteúdo de commands.js:
+// Comandos disponíveis
+const commands = {
+  '/resumo': {
+    description: 'Ativa o modo de resumo de texto',
+    handler: () => {
+      chatState.setMode('summary');
+      showMessage('Modo resumo ativado. Cole seu texto para resumir.', 'system');
+    }
+  },
+  '/help': {
+    description: 'Mostra ajuda sobre comandos disponíveis',
+    handler: () => {
+      showCommandsList();
+    }
+  },
+  '/settings': {
+    description: 'Configurações do chat',
+    handler: () => {
+      showMessage('Configurações ainda não implementadas.', 'system');
+    }
+  },
+  '/about': {
+    description: 'Informações sobre o bot',
+    handler: () => {
+      showMessage('Chat Assistant v1.0 - Powered by Gemma AI', 'system');
+    }
+  },
+  '/feedback': {
+    description: 'Enviar feedback',
+    handler: () => {
+      showMessage('Sistema de feedback em desenvolvimento.', 'system');
+    }
+  },
+  '/exit': {
+    description: 'Volta ao modo normal de chat',
+    handler: () => {
+      chatState.setMode('normal');
+      showMessage('Modo normal ativado.', 'system');
+    }
+  }
+};
+
+function handleCommand(text) {
+  if (!text.startsWith('/')) return false;
+  
+  const command = commands[text];
+  if (command) {
+    command.handler();
+    return true;
+  }
+  
+  return false;
+}
+
+function filterCommands(prefix) {
+  return Object.entries(commands)
+    .filter(([cmd]) => cmd.startsWith(prefix))
+    .map(([cmd, info]) => ({
+      command: cmd,
+      description: info.description
+    }));
+}
+
+function showCommandsList() {
+  const commandsList = Object.entries(commands)
+    .map(([cmd, info]) => `${cmd}: ${info.description}`)
+    .join('\n');
+    
+  showMessage(`Comandos disponíveis:\n${commandsList}`, 'system');
+}
+
+Conteúdo de summary-processor.js:
+// Processamento de resumos
+const WORDS_PER_CHUNK = 300;
+
+async function processSummaryText(text) {
+  const chunks = splitTextIntoChunks(text, WORDS_PER_CHUNK);
+  const summaries = [];
+  
+  for (const chunk of chunks) {
+    const summary = await sendForSummary(chunk);
+    summaries.push(summary);
+    
+    // Mostra cada resumo conforme é processado
+    showMessage(summary, 'assistant');
+  }
+  
+  return summaries.join('\n\n');
+}
+
+function splitTextIntoChunks(text, wordsPerChunk) {
+  const words = text.split(/\s+/);
+  const chunks = [];
+  
+  for (let i = 0; i < words.length; i += wordsPerChunk) {
+    chunks.push(words.slice(i, i + wordsPerChunk).join(' '));
+  }
+  
+  return chunks;
+}
+
+async function sendForSummary(text) {
+  const instructions = `Quero que você responda somente em Português do Brasil. Por favor, leia a parte da transcrição do vídeo e siga as instruções que lhe dou abaixo. Se as instruções não forem especificadas ou não estiverem claras, simplesmente resuma a transcrição para mim em um único parágrafo.
+
+[INSTRUCTIONS]: Por favor, faça um resumo completo e detalhado, com explicações dos pontos principais, enumerando os tópicos mais importantes e expandindo em cada um deles de forma a não omitir nenhuma informação relevante do texto original. Certifique-se de PONTUAR e explicar OS pontos discutidos.`;
+
+  const response = await fetch('/send_message', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ 
+      message: text,
+      instructions,
+      mode: 'summary',
+      conversation_id: chatState.currentConversationId
+    })
+  });
+  
+  const data = await response.json();
+  return data.response;
+}
+
+Conteúdo de index.html:
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat com IA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/command-dropdown.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Histórico</h2>
+                <button id="new-chat-btn" class="new-chat-button">Novo Chat</button>
+            </div>
+            <div class="conversation-list">
+                {% for conversation in conversations %}
+                <div class="conversation-item" data-id="{{ conversation.id }}">
+                    <span class="conversation-preview">{{ conversation.messages[0].content[:50] }}...</span>
+                    <span class="conversation-date">{{ conversation.timestamp.split('T')[0] }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages"></div>
+            <!-- Adicione o indicador de digitação aqui -->
+            <div class="typing-indicator" id="typing-indicator" style="display: none;">
+                <span>Digitando...</span>
+            </div>
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <div id="command-dropdown" class="command-dropdown"></div>
+                    <textarea 
+                        id="message-input" 
+                        placeholder="Digite / para ver os comandos disponíveis"
+                        rows="3"
+                    ></textarea>
+                </div>
+                <button id="send-button">Enviar</button>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/chat-state.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/commands.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chat-input.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/summary-processor.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <script>
+        // Inicializa o input com dropdown
+        new ChatInput(
+            document.getElementById('message-input'),
+            document.getElementById('command-dropdown')
+        );
+    </script>
+</body>
+</html>
+
+Conteúdo de chat_history.py:
+import json
+from datetime import datetime
+import os
+
+HISTORY_FILE = 'data/chat_history.json'
+
+def ensure_data_directory():
+    os.makedirs('data', exist_ok=True)
+
+def get_conversation_history():
+    ensure_data_directory()
+    try:
+        if os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return []
+    except json.JSONDecodeError as e:
+        print(f"Erro ao carregar histórico: {str(e)}")
+        return []  # Retorna uma lista vazia em caso de erro
+    except Exception as e:
+        print(f"Erro ao carregar histórico: {str(e)}")
+        return []  # Retorna uma lista vazia em caso de erro
+
+def get_conversation_by_id(conversation_id):
+    """Busca uma conversa específica pelo ID"""
+    conversations = get_conversation_history()
+    for conversation in conversations:
+        if conversation['id'] == conversation_id:
+            return conversation
+    return None
+  
+def save_conversation(message, response, conversation_id=None):
+    """
+    Salva ou atualiza uma conversa no histórico.
+    Se conversation_id for fornecido, atualiza a conversa existente.
+    Caso contrário, cria uma nova conversa.
+    """
+    ensure_data_directory()
+    try:
+        # Carrega o histórico atual
+        conversations = get_conversation_history()
+        
+        if conversation_id:
+            # Atualiza conversa existente
+            updated = False
+            for conversation in conversations:
+                if conversation['id'] == conversation_id:
+                    conversation['messages'].extend([
+                        {'role': 'user', 'content': message},
+                        {'role': 'assistant', 'content': response}
+                    ])
+                    conversation['timestamp'] = datetime.now().isoformat()
+                    updated = True
+                    break
+            
+            # Se não encontrou o ID, cria uma nova conversa (backup seguro)
+            if not updated:
+                conversation_id = str(len(conversations) + 1)
+                new_conversation = {
+                    'id': conversation_id,
+                    'timestamp': datetime.now().isoformat(),
+                    'messages': [
+                        {'role': 'user', 'content': message},
+                        {'role': 'assistant', 'content': response}
+                    ]
+                }
+                conversations.append(new_conversation)
+        else:
+            # Cria nova conversa
+            conversation_id = str(len(conversations) + 1)
+            new_conversation = {
+                'id': conversation_id,
+                'timestamp': datetime.now().isoformat(),
+                'messages': [
+                    {'role': 'user', 'content': message},
+                    {'role': 'assistant', 'content': response}
+                ]
+            }
+            conversations.append(new_conversation)
+        
+        # Salva as conversas atualizadas
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(conversations, f, ensure_ascii=False, indent=2)
+        
+        return conversation_id
+    except Exception as e:
+        print(f"Erro ao salvar conversa: {str(e)}")
+        return None
+ 
+
+Conteúdo de text_processor.py:
+def split_text(text, words_per_chunk=300):
+    """
+    Divide um texto em chunks menores baseado no número de palavras.
+    """
+    words = text.split()
+    chunks = []
+    
+    for i in range(0, len(words), words_per_chunk):
+        chunk = ' '.join(words[i:i + words_per_chunk])
+        chunks.append(chunk)
+    
+    return chunks
+
+
+==========================================
+Estrutura de pastas:
+==========================================
+linha do tempo sagrada
+    app.py
+    codigo_completo.txt
+    linha do tempo sagrada.txt
+    requirements.txt
+    static
+        css
+            command-dropdown.css
+            style.css
+        favicon.ico
+        js
+            chat-input.js
+            chat-state.js
+            chat.js
+            chat.js.old
+            commands.js
+            summary-processor.js
+    templates
+        index.html
+    utils
+        chat_history.py
+        text_processor.py
